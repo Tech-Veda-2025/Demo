@@ -1,0 +1,393 @@
+{% extends "base.html" %}
+
+{% block title %}Sign Up - Ayurvedic Healthcare Portal{% endblock %}
+
+{% block description %}Join the Ayurvedic Healthcare Portal as a patient or doctor. Start your journey to holistic wellness with traditional Ayurvedic care.{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row" style="justify-content: center;">
+        <div class="col-6" style="max-width: 600px;">
+            <div class="card">
+                <div class="card-header text-center">
+                    <h1 class="card-title" style="font-size: 2.5rem;">🕉️ Join Our Community</h1>
+                    <p style="color: var(--text-secondary); margin-bottom: 0;">Start your journey to holistic wellness</p>
+                </div>
+
+                <form id="signup-form" method="POST" action="{{ url_for('signup') }}">
+                    <!-- User Type Selection -->
+                    <div class="form-group">
+                        <label class="form-label">Choose Your Account Type</label>
+                        <div class="user-type-selection">
+                            <div class="user-type-card" data-type="normal">
+                                <div class="icon">👤</div>
+                                <h3>Patient</h3>
+                                <p>Find doctors, book appointments, manage your health</p>
+                            </div>
+                            <div class="user-type-card" data-type="doctor">
+                                <div class="icon">👨‍⚕️</div>
+                                <h3>Doctor</h3>
+                                <p>Manage your practice, connect with patients</p>
+                            </div>
+                        </div>
+                        <input type="hidden" id="user_type" name="user_type" required>
+                    </div>
+
+                    <!-- Name Field -->
+                    <div class="form-group">
+                        <label for="name" class="form-label">
+                            👤 Full Name
+                        </label>
+                        <input 
+                            type="text" 
+                            id="name" 
+                            name="name" 
+                            class="form-control" 
+                            placeholder="Enter your full name"
+                            required
+                            autocomplete="name"
+                        >
+                    </div>
+
+                    <!-- Email Field -->
+                    <div class="form-group">
+                        <label for="email" class="form-label">
+                            📧 Email Address
+                        </label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            name="email" 
+                            class="form-control" 
+                            placeholder="Enter your email address"
+                            required
+                            autocomplete="email"
+                        >
+                    </div>
+
+                    <!-- Password Field -->
+                    <div class="form-group">
+                        <label for="password" class="form-label">
+                            🔒 Password
+                        </label>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            class="form-control" 
+                            placeholder="Create a strong password"
+                            required
+                            autocomplete="new-password"
+                        >
+                        <small style="color: var(--text-secondary); display: block; margin-top: 0.25rem;">
+                            Password must be at least 8 characters with uppercase, lowercase, and numbers
+                        </small>
+                    </div>
+
+                    <!-- Confirm Password Field -->
+                    <div class="form-group">
+                        <label for="confirm_password" class="form-label">
+                            🔐 Confirm Password
+                        </label>
+                        <input 
+                            type="password" 
+                            id="confirm_password" 
+                            name="confirm_password" 
+                            class="form-control" 
+                            placeholder="Confirm your password"
+                            required
+                            autocomplete="new-password"
+                        >
+                    </div>
+
+                    <!-- Doctor-specific Fields (initially hidden) -->
+                    <div id="doctor-fields" style="display: none;">
+                        <div class="form-group">
+                            <label for="specialty" class="form-label">
+                                🌿 Medical Specialty
+                            </label>
+                            <select id="specialty" name="specialty" class="form-control">
+                                <option value="">Select your specialty</option>
+                                <option value="General Ayurveda">General Ayurveda</option>
+                                <option value="Panchakarma">Panchakarma</option>
+                                <option value="Kayachikitsa">Kayachikitsa (Internal Medicine)</option>
+                                <option value="Shalakya Tantra">Shalakya Tantra (ENT & Ophthalmology)</option>
+                                <option value="Shalya Tantra">Shalya Tantra (Surgery)</option>
+                                <option value="Prasuti Tantra">Prasuti Tantra (Gynecology & Obstetrics)</option>
+                                <option value="Kaumarbhritya">Kaumarbhritya (Pediatrics)</option>
+                                <option value="Agada Tantra">Agada Tantra (Toxicology)</option>
+                                <option value="Rasayana Tantra">Rasayana Tantra (Rejuvenation)</option>
+                                <option value="Vajikarana">Vajikarana (Aphrodisiac Therapy)</option>
+                                <option value="Yoga Therapy">Yoga Therapy</option>
+                                <option value="Marma Therapy">Marma Therapy</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="qualification" class="form-label">
+                                🎓 Qualifications
+                            </label>
+                            <input 
+                                type="text" 
+                                id="qualification" 
+                                name="qualification" 
+                                class="form-control" 
+                                placeholder="e.g., BAMS, MD (Ayurveda), Ph.D."
+                            >
+                            <small style="color: var(--text-secondary); display: block; margin-top: 0.25rem;">
+                                Enter your medical qualifications and certifications
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Captcha -->
+                    <div class="form-group">
+                        <label for="captcha" class="form-label">
+                            🔐 Security Verification
+                        </label>
+                        <div class="captcha-container">
+                            <div id="captcha-display" class="captcha-display">LOADING...</div>
+                            <button type="button" id="captcha-refresh" class="captcha-refresh" title="Refresh Captcha">
+                                🔄
+                            </button>
+                        </div>
+                        <input 
+                            type="text" 
+                            id="captcha" 
+                            name="captcha" 
+                            class="form-control" 
+                            placeholder="Enter the text shown above"
+                            required
+                            autocomplete="off"
+                            style="margin-top: 0.5rem;"
+                        >
+                    </div>
+
+                    <!-- Terms and Conditions -->
+                    <div class="form-group">
+                        <label style="display: flex; align-items: flex-start; cursor: pointer;">
+                            <input type="checkbox" name="terms" required style="margin-right: 0.5rem; margin-top: 0.25rem;">
+                            <span style="font-size: 0.9rem; color: var(--text-secondary);">
+                                I agree to the <a href="#" style="color: var(--secondary-color);">Terms of Service</a> 
+                                and <a href="#" style="color: var(--secondary-color);">Privacy Policy</a>. 
+                                I understand that my information will be used to provide healthcare services.
+                            </span>
+                        </label>
+                    </div>
+
+                    <!-- Sign Up Button -->
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-bottom: 1rem;">
+                        Create Account
+                    </button>
+                </form>
+
+                <!-- Divider -->
+                <div style="text-align: center; margin: 1.5rem 0; position: relative;">
+                    <span style="background-color: var(--white); padding: 0 1rem; color: var(--text-secondary); position: relative; z-index: 1;">
+                        Or sign up with
+                    </span>
+                    <div style="position: absolute; top: 50%; left: 0; right: 0; height: 1px; background-color: var(--border-color);"></div>
+                </div>
+
+                <!-- Google Sign Up -->
+                <button id="google-signin" class="btn btn-google" style="margin-bottom: 1rem;">
+                    Sign up with Google
+                </button>
+
+                <!-- Sign In Link -->
+                <div class="text-center">
+                    <p style="margin: 0; color: var(--text-secondary);">
+                        Already have an account? 
+                        <a href="{{ url_for('signin') }}" style="color: var(--secondary-color); text-decoration: none; font-weight: 500;">
+                            Sign in here
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Benefits Section -->
+    <div class="row mt-3">
+        <div class="col-4">
+            <div class="card text-center">
+                <div style="font-size: 3rem; margin-bottom: 1rem; color: var(--secondary-color);">🎯</div>
+                <h4 style="color: var(--primary-color);">Personalized Care</h4>
+                <p>Get treatment plans tailored to your unique constitution and health goals based on Ayurvedic principles.</p>
+            </div>
+        </div>
+
+        <div class="col-4">
+            <div class="card text-center">
+                <div style="font-size: 3rem; margin-bottom: 1rem; color: var(--secondary-color);">🌍</div>
+                <h4 style="color: var(--primary-color);">Global Access</h4>
+                <p>Connect with certified Ayurvedic practitioners worldwide and access healthcare from anywhere.</p>
+            </div>
+        </div>
+
+        <div class="col-4">
+            <div class="card text-center">
+                <div style="font-size: 3rem; margin-bottom: 1rem; color: var(--secondary-color);">📊</div>
+                <h4 style="color: var(--primary-color);">Health Tracking</h4>
+                <p>Monitor your health progress with digital tools and maintain comprehensive wellness records.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('signup-form');
+    const passwordInput = document.getElementById('password');
+    const confirmPasswordInput = document.getElementById('confirm_password');
+
+    // Password strength indicator
+    function updatePasswordStrength(password) {
+        const strengthIndicator = document.getElementById('password-strength');
+        if (!strengthIndicator) {
+            const indicator = document.createElement('div');
+            indicator.id = 'password-strength';
+            indicator.style.marginTop = '0.25rem';
+            indicator.style.fontSize = '0.8rem';
+            passwordInput.parentNode.appendChild(indicator);
+        }
+
+        const strength = calculatePasswordStrength(password);
+        const indicator = document.getElementById('password-strength');
+
+        if (password.length === 0) {
+            indicator.textContent = '';
+            return;
+        }
+
+        const strengthText = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
+        const strengthColors = ['#f44336', '#ff9800', '#ffc107', '#4caf50', '#2e7d32'];
+
+        indicator.textContent = `Password Strength: ${strengthText[strength]}`;
+        indicator.style.color = strengthColors[strength];
+    }
+
+    function calculatePasswordStrength(password) {
+        let score = 0;
+        if (password.length >= 8) score++;
+        if (/[a-z]/.test(password)) score++;
+        if (/[A-Z]/.test(password)) score++;
+        if (/[0-9]/.test(password)) score++;
+        if (/[^a-zA-Z0-9]/.test(password)) score++;
+        return Math.min(score, 4);
+    }
+
+    passwordInput.addEventListener('input', function() {
+        updatePasswordStrength(this.value);
+
+        // Check password match
+        if (confirmPasswordInput.value) {
+            validatePasswordMatch();
+        }
+    });
+
+    confirmPasswordInput.addEventListener('input', validatePasswordMatch);
+
+    function validatePasswordMatch() {
+        const password = passwordInput.value;
+        const confirmPassword = confirmPasswordInput.value;
+
+        if (confirmPassword) {
+            if (password === confirmPassword) {
+                confirmPasswordInput.style.borderColor = 'var(--secondary-color)';
+                clearFieldError(confirmPasswordInput);
+            } else {
+                confirmPasswordInput.style.borderColor = '#f44336';
+                showFieldError(confirmPasswordInput, 'Passwords do not match');
+            }
+        }
+    }
+
+    function showFieldError(field, message) {
+        clearFieldError(field);
+        const error = document.createElement('div');
+        error.className = 'field-error';
+        error.style.color = '#f44336';
+        error.style.fontSize = '0.8rem';
+        error.style.marginTop = '0.25rem';
+        error.textContent = message;
+        field.parentNode.appendChild(error);
+    }
+
+    function clearFieldError(field) {
+        const error = field.parentNode.querySelector('.field-error');
+        if (error) error.remove();
+    }
+
+    // Form submission handling
+    form.addEventListener('submit', function(e) {
+        const userType = document.getElementById('user_type').value;
+        const password = passwordInput.value;
+        const confirmPassword = confirmPasswordInput.value;
+
+        // Validate user type selection
+        if (!userType) {
+            e.preventDefault();
+            AyurvedicPortal.showAlert('Please select an account type', 'error');
+            document.querySelector('.user-type-selection').scrollIntoView({ behavior: 'smooth' });
+            return false;
+        }
+
+        // Validate password match
+        if (password !== confirmPassword) {
+            e.preventDefault();
+            AyurvedicPortal.showAlert('Passwords do not match', 'error');
+            confirmPasswordInput.focus();
+            return false;
+        }
+
+        // Validate password strength
+        if (calculatePasswordStrength(password) < 3) {
+            e.preventDefault();
+            AyurvedicPortal.showAlert('Please create a stronger password', 'error');
+            passwordInput.focus();
+            return false;
+        }
+
+        // Validate doctor-specific fields
+        if (userType === 'doctor') {
+            const specialty = document.getElementById('specialty').value;
+            const qualification = document.getElementById('qualification').value;
+
+            if (!specialty || !qualification) {
+                e.preventDefault();
+                AyurvedicPortal.showAlert('Please fill in all doctor-specific fields', 'error');
+                return false;
+            }
+        }
+
+        // Show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Creating Account...';
+        submitBtn.disabled = true;
+
+        // Re-enable button after 5 seconds (in case of server error)
+        setTimeout(() => {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }, 5000);
+    });
+
+    // Auto-generate captcha on page load
+    setTimeout(() => {
+        AyurvedicPortal.generateCaptcha();
+    }, 500);
+});
+
+// Handle terms and privacy policy links
+document.addEventListener('click', function(e) {
+    if (e.target.textContent === 'Terms of Service' || e.target.textContent === 'Privacy Policy') {
+        e.preventDefault();
+        AyurvedicPortal.showAlert('Terms and Privacy Policy will be available soon. By signing up, you agree to use this platform responsibly.', 'info');
+    }
+});
+</script>
+{% endblock %}

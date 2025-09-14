@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Ayurvedic Healthcare Portal - Traditional Healing, Modern Care{% endblock %}
+
+{% block description %}Experience the ancient wisdom of Ayurveda with modern healthcare technology. Connect with certified Ayurvedic doctors and manage your health naturally.{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero">
+    <div class="container">
+        <h1>🕉️ Welcome to Ayurvedic Healthcare Portal</h1>
+        <p>Experience the perfect blend of ancient Ayurvedic wisdom and modern healthcare technology. Connect with certified practitioners and embark on your journey to holistic wellness.</p>
+        <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">
+            <a href="{{ url_for('signup') }}" class="btn btn-primary">Get Started</a>
+            <a href="#about" class="btn btn-outline">Learn More</a>
+        </div>
+    </div>
+</section>
+
+<div class="container">
+    <!-- Features Section -->
+    <section id="services" class="mb-3">
+        <h2 class="text-center mb-3" style="color: var(--primary-color); font-size: 2.5rem;">Our Services</h2>
+
+        <div class="row">
+            <div class="col-4">
+                <div class="card text-center">
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">🌿</div>
+                    <h3 style="color: var(--primary-color);">Ayurvedic Consultation</h3>
+                    <p>Connect with certified Ayurvedic doctors for personalized treatment plans based on your unique constitution and health needs.</p>
+                    <a href="{{ url_for('signup') }}" class="btn btn-secondary">Book Consultation</a>
+                </div>
+            </div>
+
+            <div class="col-4">
+                <div class="card text-center">
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">💆</div>
+                    <h3 style="color: var(--primary-color);">Panchakarma Therapy</h3>
+                    <p>Experience traditional Panchakarma treatments for detoxification, rejuvenation, and restoration of natural balance.</p>
+                    <a href="{{ url_for('signup') }}" class="btn btn-secondary">Learn More</a>
+                </div>
+            </div>
+
+            <div class="col-4">
+                <div class="card text-center">
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">🧘</div>
+                    <h3 style="color: var(--primary-color);">Holistic Wellness</h3>
+                    <p>Comprehensive approach combining herbal medicine, yoga therapy, meditation, and lifestyle counseling for optimal health.</p>
+                    <a href="{{ url_for('signup') }}" class="btn btn-secondary">Explore</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title" style="font-size: 2rem;">About Ayurvedic Healthcare Portal</h2>
+            </div>
+
+            <div class="row">
+                <div class="col-6">
+                    <h3 style="color: var(--secondary-color); margin-bottom: 1rem;">🌱 Our Mission</h3>
+                    <p>To make authentic Ayurvedic healthcare accessible to everyone through technology while preserving the traditional wisdom of this ancient science. We bridge the gap between traditional healing and modern convenience.</p>
+
+                    <h3 style="color: var(--secondary-color); margin-bottom: 1rem;">🎯 Our Vision</h3>
+                    <p>Creating a world where natural healing and preventive care are the foundations of healthcare, empowering individuals to take charge of their wellness journey.</p>
+                </div>
+
+                <div class="col-6">
+                    <h3 style="color: var(--secondary-color); margin-bottom: 1rem;">✨ What We Offer</h3>
+                    <ul style="list-style: none; padding: 0;">
+                        <li style="margin-bottom: 0.5rem;">🩺 <strong>Expert Consultations:</strong> Certified Ayurvedic doctors</li>
+                        <li style="margin-bottom: 0.5rem;">📱 <strong>Digital Platform:</strong> Easy appointment booking and management</li>
+                        <li style="margin-bottom: 0.5rem;">🌿 <strong>Herbal Solutions:</strong> Authentic Ayurvedic medicines</li>
+                        <li style="margin-bottom: 0.5rem;">📋 <strong>Health Records:</strong> Secure digital health management</li>
+                        <li style="margin-bottom: 0.5rem;">🎓 <strong>Education:</strong> Wellness tips and Ayurvedic knowledge</li>
+                        <li style="margin-bottom: 0.5rem;">🤝 <strong>Community:</strong> Connect with like-minded wellness seekers</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- User Types Section -->
+    <section class="mb-3">
+        <h2 class="text-center mb-3" style="color: var(--primary-color); font-size: 2.5rem;">Join Our Community</h2>
+
+        <div class="row">
+            <div class="col-6">
+                <div class="card text-center" style="height: 100%;">
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">👤</div>
+                    <h3 style="color: var(--primary-color);">For Patients</h3>
+                    <p>Find certified Ayurvedic doctors, book consultations, manage your health records, and access personalized wellness plans tailored to your unique constitution.</p>
+                    <ul style="text-align: left; margin: 1rem 0;">
+                        <li>🔍 Find nearby Ayurvedic doctors</li>
+                        <li>📅 Easy appointment booking</li>
+                        <li>📱 Digital health records</li>
+                        <li>💬 Online consultations</li>
+                        <li>📊 Health progress tracking</li>
+                        <li>🌿 Personalized treatment plans</li>
+                    </ul>
+                    <a href="{{ url_for('signup') }}" class="btn btn-primary">Sign Up as Patient</a>
+                </div>
+            </div>
+
+            <div class="col-6">
+                <div class="card text-center" style="height: 100%;">
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">👨‍⚕️</div>
+                    <h3 style="color: var(--primary-color);">For Doctors</h3>
+                    <p>Join our platform to reach more patients, manage your practice efficiently, and provide quality Ayurvedic care with modern digital tools and patient management systems.</p>
+                    <ul style="text-align: left; margin: 1rem 0;">
+                        <li>🏥 Create your digital clinic</li>
+                        <li>📋 Patient management system</li>
+                        <li>💰 Online appointment fees</li>
+                        <li>📈 Practice analytics</li>
+                        <li>🎓 Continuing education</li>
+                        <li>🤝 Professional networking</li>
+                    </ul>
+                    <a href="{{ url_for('signup') }}" class="btn btn-primary">Sign Up as Doctor</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Statistics Section -->
+    <section class="mb-3">
+        <div class="card" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: var(--white);">
+            <div class="card-header" style="border-color: rgba(255,255,255,0.3);">
+                <h2 class="text-center" style="color: var(--white);">Our Impact</h2>
+            </div>
+
+            <div class="row text-center">
+                <div class="col-3">
+                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">1000+</div>
+                    <h4>Happy Patients</h4>
+                </div>
+                <div class="col-3">
+                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">50+</div>
+                    <h4>Expert Doctors</h4>
+                </div>
+                <div class="col-3">
+                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">5000+</div>
+                    <h4>Consultations</h4>
+                </div>
+                <div class="col-3">
+                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">98%</div>
+                    <h4>Satisfaction Rate</h4>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="mb-3">
+        <h2 class="text-center mb-3" style="color: var(--primary-color); font-size: 2.5rem;">What Our Users Say</h2>
+
+        <div class="row">
+            <div class="col-4">
+                <div class="card">
+                    <div style="text-align: center; margin-bottom: 1rem;">
+                        <div style="font-size: 3rem;">⭐⭐⭐⭐⭐</div>
+                    </div>
+                    <p style="font-style: italic; margin-bottom: 1rem;">"The platform made it incredibly easy to find the right Ayurvedic doctor. The online consultation was thorough and the personalized treatment plan has significantly improved my health."</p>
+                    <div style="font-weight: bold; color: var(--primary-color);">- Priya Sharma, Patient</div>
+                </div>
+            </div>
+
+            <div class="col-4">
+                <div class="card">
+                    <div style="text-align: center; margin-bottom: 1rem;">
+                        <div style="font-size: 3rem;">⭐⭐⭐⭐⭐</div>
+                    </div>
+                    <p style="font-style: italic; margin-bottom: 1rem;">"As a practicing Ayurvedic physician, this platform has helped me reach more patients and manage my practice more efficiently. The digital tools are excellent."</p>
+                    <div style="font-weight: bold; color: var(--primary-color);">- Dr. Rajesh Kumar, Ayurvedic Doctor</div>
+                </div>
+            </div>
+
+            <div class="col-4">
+                <div class="card">
+                    <div style="text-align: center; margin-bottom: 1rem;">
+                        <div style="font-size: 3rem;">⭐⭐⭐⭐⭐</div>
+                    </div>
+                    <p style="font-style: italic; margin-bottom: 1rem;">"The combination of traditional Ayurvedic wisdom with modern technology is brilliant. I can access my health records anywhere and stay connected with my doctor."</p>
+                    <div style="font-weight: bold; color: var(--primary-color);">- Amit Patel, Patient</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title" style="font-size: 2rem;">Get In Touch</h2>
+            </div>
+
+            <div class="row">
+                <div class="col-6">
+                    <h3 style="color: var(--secondary-color); margin-bottom: 1rem;">📞 Contact Information</h3>
+                    <div style="margin-bottom: 1rem;">
+                        <strong>📧 Email:</strong> info@ayurvedicportal.com<br>
+                        <strong>📱 Phone:</strong> +91 98765 43210<br>
+                        <strong>📍 Address:</strong> 123 Wellness Street, Health City, State - 123456<br>
+                        <strong>🕐 Hours:</strong> 24/7 Online Support
+                    </div>
+
+                    <h3 style="color: var(--secondary-color); margin-bottom: 1rem;">🤝 Follow Us</h3>
+                    <div style="display: flex; gap: 1rem;">
+                        <a href="#" class="btn btn-outline" style="padding: 0.5rem 1rem;">Facebook</a>
+                        <a href="#" class="btn btn-outline" style="padding: 0.5rem 1rem;">Twitter</a>
+                        <a href="#" class="btn btn-outline" style="padding: 0.5rem 1rem;">Instagram</a>
+                        <a href="#" class="btn btn-outline" style="padding: 0.5rem 1rem;">LinkedIn</a>
+                    </div>
+                </div>
+
+                <div class="col-6">
+                    <form id="contact-form">
+                        <div class="form-group">
+                            <label class="form-label">Your Name</label>
+                            <input type="text" class="form-control" name="name" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Email Address</label>
+                            <input type="email" class="form-control" name="email" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Message</label>
+                            <textarea class="form-control" name="message" rows="4" required></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Send Message</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('contact-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    AyurvedicPortal.showAlert('Thank you for your message! We will get back to you soon.', 'success');
+    this.reset();
+});
+</script>
+{% endblock %}

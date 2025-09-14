@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+
+{% block title %}Doctor Dashboard - Ayurvedic Healthcare Portal{% endblock %}
+
+{% block description %}Manage your Ayurvedic practice efficiently. Handle appointments, patient records, and grow your practice with digital tools.{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Welcome Section -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card" id="card-1" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: var(--white);">
+                <div style="padding: 2rem;">
+                    <h1 style="color: var(--white); margin-bottom: 0.5rem;">🙏 Namaste, {{ session.user_name }}!</h1>
+                    <p style="margin-bottom: 1rem; opacity: 0.9;">Welcome to your practice management dashboard. Empower healing through traditional Ayurvedic wisdom.</p>
+                    <div style="display: flex; gap: 2rem; align-items: center; flex-wrap: wrap;">
+                        <div>
+                            <strong>Specialty:</strong> 
+                            <span>{{ session.specialty or 'Ayurvedic Medicine' }}</span>
+                        </div>
+                        <div>
+                            <strong>Qualification:</strong> 
+                            <span>{{ session.qualification or 'BAMS' }}</span>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <div style="background: rgba(255,255,255,0.2); padding: 0.5rem 1rem; border-radius: var(--border-radius); display: inline-block;">
+                                ⭐ Rating: 4.8/5 (127 reviews)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard">
+        <!-- Hideable Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h3 class="sidebar-title">
+                    <span class="icon">⚕️</span>
+                    <span>Practice Menu</span>
+                </h3>
+                <button class="sidebar-toggle" title="Toggle sidebar">◀️</button>
+            </div>
+
+            <ul class="sidebar-menu">
+                <li><a href="#dashboard" class="active" data-tooltip="Dashboard">
+                    <span class="icon">📊</span>
+                    <span class="text">Dashboard</span>
+                </a></li>
+                <li><a href="#appointments" data-tooltip="Appointments">
+                    <span class="icon">📅</span>
+                    <span class="text">Appointments</span>
+                </a></li>
+                <li><a href="#sell-medicines" data-tooltip="Sell Medicines">
+                    <span class="icon">💊</span>
+                    <span class="text">Sell Medicines</span>
+                </a></li>
+                <li><a href="#patients" data-tooltip="Patients">
+                    <span class="icon">👥</span>
+                    <span class="text">Patients</span>
+                </a></li>
+                <li><a href="#ai-chat" data-tooltip="AI Chat">
+                    <span class="icon">🤖</span>
+                    <span class="text">AI Chat</span>
+                </a></li>
+                <li><a href="#prescriptions" data-tooltip="Prescriptions">
+                    <span class="icon">📋</span>
+                    <span class="text">Prescriptions</span>
+                </a></li>
+                <li><a href="#consultations" data-tooltip="Consultations">
+                    <span class="icon">💬</span>
+                    <span class="text">Consultations</span>
+                </a></li>
+                <li><a href="#schedule" data-tooltip="Schedule">
+                    <span class="icon">⏰</span>
+                    <span class="text">Schedule</span>
+                </a></li>
+                <li><a href="#earnings" data-tooltip="Earnings">
+                    <span class="icon">💰</span>
+                    <span class="text">Earnings</span>
+                </a></li>
+                <li><a href="#help-support" data-tooltip="Help & Support">
+                    <span class="icon">❓</span>
+                    <span class="text">Help & Support</span>
+                </a></li>
+            </ul>
+
+            <!-- Quick Actions -->
+            <div class="sidebar-actions">
+                <h4>
+                    <span class="icon">⚡</span>
+                    <span>Quick Actions</span>
+                </h4>
+                <button class="btn btn-primary" onclick="viewTodayPatients()">
+                    <span class="icon">👥</span>
+                    <span>Today's Patients</span>
+                </button>
+                <button class="btn btn-secondary" onclick="setAvailability()">
+                    <span class="icon">⏰</span>
+                    <span>Set Availability</span>
+                </button>
+            </div>
+
+            <!-- Practice Status -->
+            <div class="practice-status">
+                <div class="status-icon">🟢</div>
+                <div class="status-text">Online</div>
+                <div class="status-description">Available for consultations</div>
+            </div>
+        </aside>
+
+        <!-- Main Dashboard Content -->
+        <main class="dashboard-content">
+            <!-- Practice Overview Cards -->
+            <div class="dashboard-card">
+                <div class="icon">👥</div>
+                <h3>Total Patients</h3>
+                <div class="number" id="patients-count">127</div>
+                <p>Active patient base</p>
+                <button class="btn btn-outline" onclick="viewAllPatients()">View Patients</button>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="icon">📅</div>
+                <h3>Today's Appointments</h3>
+                <div class="number" id="appointments-today">8</div>
+                <p>Scheduled for today</p>
+                <button class="btn btn-outline" onclick="viewTodayAppointments()">View Schedule</button>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="icon">💰</div>
+                <h3>Monthly Earnings</h3>
+                <div class="number" id="monthly-earnings">₹45,250</div>
+                <p>This month's revenue</p>
+                <button class="btn btn-outline" onclick="viewEarnings()">View Details</button>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="icon">💬</div>
+                <h3>Consultations</h3>
+                <div class="number" id="consultations-month">89</div>
+                <p>Completed this month</p>
+                <button class="btn btn-outline" onclick="viewConsultationHistory()">View History</button>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="icon">⭐</div>
+                <h3>Patient Rating</h3>
+                <div class="number" id="rating">4.8</div>
+                <p>Average rating (127 reviews)</p>
+                <button class="btn btn-outline" onclick="viewReviews()">View Reviews</button>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="icon">📈</div>
+                <h3>Growth Rate</h3>
+                <div class="number" id="growth-rate">+15%</div>
+                <p>New patients this month</p>
+                <button class="btn btn-outline" onclick="viewAnalytics()">View Analytics</button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Today's Schedule and Practice Analytics -->
+    <div class="row mt-3">
+        <div class="col-6">
+            <div class="card" id="card-2">
+                <div class="card-header">
+                    <h3 class="card-title">📅 Today's Schedule</h3>
+                    <div style="margin-left: auto;">
+                        <span style="background: var(--background-color); color: var(--secondary-color); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">
+                            {{ current_day }}
+                        </span>
+                    </div>
+                </div>
+                <div id="today-schedule">
+                    <div style="display: flex; align-items: center; padding: 1rem 0; border-bottom: 1px solid var(--border-color);">
+                        <div style="margin-right: 1rem;">
+                            <div style="font-weight: bold;">9:00 AM</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">30 min</div>
+                        </div>
+                        <div style="flex: 1;">
+                            <strong>Priya Sharma</strong><br>
+                            <small style="color: var(--text-secondary);">Initial consultation - Joint pain</small>
+                        </div>
+                        <div>
+                            <span style="background: #E3F2FD; color: #1976D2; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">Online</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; padding: 1rem 0; border-bottom: 1px solid var(--border-color);">
+                        <div style="margin-right: 1rem;">
+                            <div style="font-weight: bold;">10:30 AM</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">45 min</div>
+                        </div>
+                        <div style="flex: 1;">
+                            <strong>Amit Patel</strong><br>
+                            <small style="color: var(--text-secondary);">Follow-up - Digestive issues</small>
+                        </div>
+                        <div>
+                            <span style="background: var(--background-color); color: var(--primary-color); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">In-Person</span>
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin-top: 1rem;">
+                        <button class="btn btn-outline" onclick="viewFullSchedule()" style="width: 100%;">
+                            View Full Schedule
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6">
+            <div class="card" id="card-3">
+                <div class="card-header">
+                    <h3 class="card-title">📊 Practice Analytics</h3>
+                </div>
+                <div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span>👥 Patient Satisfaction</span>
+                            <span style="font-weight: bold; color: var(--secondary-color);">96%</span>
+                        </div>
+                        <div style="background: var(--border-color); height: 6px; border-radius: 3px;">
+                            <div style="background: var(--secondary-color); height: 100%; width: 96%; border-radius: 3px;"></div>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 1.5rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span>⏰ On-Time Rate</span>
+                            <span style="font-weight: bold; color: var(--secondary-color);">92%</span>
+                        </div>
+                        <div style="background: var(--border-color); height: 6px; border-radius: 3px;">
+                            <div style="background: var(--secondary-color); height: 100%; width: 92%; border-radius: 3px;"></div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                        <div style="text-align: center; padding: 1rem; background: var(--background-color); border-radius: var(--border-radius);">
+                            <div style="font-size: 1.5rem; color: var(--secondary-color); margin-bottom: 0.25rem;">24</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">New Patients</div>
+                        </div>
+                        <div style="text-align: center; padding: 1rem; background: var(--background-color); border-radius: var(--border-radius);">
+                            <div style="font-size: 1.5rem; color: var(--secondary-color); margin-bottom: 0.25rem;">98%</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">Cure Rate</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Doctor dashboard functionality
+function addAvailability() {
+    AyurvedicPortal.showAlert('Schedule management system coming soon!', 'info');
+}
+
+function viewTodayPatients() {
+    AyurvedicPortal.showAlert('Today\'s patient list loading...', 'info');
+}
+
+function viewAllPatients() {
+    AyurvedicPortal.showAlert('Patient management system coming soon!', 'info');
+}
+
+function viewTodayAppointments() {
+    AyurvedicPortal.showAlert('Loading today\'s appointments...', 'info');
+}
+
+function viewEarnings() {
+    AyurvedicPortal.showAlert('Earnings analytics coming soon!', 'info');
+}
+
+function viewConsultationHistory() {
+    AyurvedicPortal.showAlert('Consultation history viewer coming soon!', 'info');
+}
+
+function viewReviews() {
+    AyurvedicPortal.showAlert('Patient reviews system coming soon!', 'info');
+}
+
+function viewAnalytics() {
+    AyurvedicPortal.showAlert('Practice analytics coming soon!', 'info');
+}
+
+function viewFullSchedule() {
+    AyurvedicPortal.showAlert('Full schedule viewer coming soon!', 'info');
+}
+
+// Initialize doctor dashboard with sidebar demo
+// document.addEventListener('DOMContentLoaded', function() {
+//     // Demo message for sidebar toggle
+//     setTimeout(() => {
+//         AyurvedicPortal.showAlert('💡 Tip: Click the ◀️ arrow next to "Practice Menu" to hide/show the sidebar!', 'info');
+//     }, 2000);
+// });
+</script>
+{% endblock %}

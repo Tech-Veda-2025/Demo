@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Ayurvedic Healthcare Portal{% endblock %}</title>
+
+    <!-- Meta tags for SEO -->
+    <meta name="description" content="{% block description %}Comprehensive Ayurvedic Healthcare Portal for patients and doctors. Traditional healing with modern technology.{% endblock %}">
+    <meta name="keywords" content="ayurveda, healthcare, traditional medicine, holistic healing, doctors, patients">
+    <meta name="author" content="Ayurvedic Healthcare Portal">
+
+    <!-- Open Graph meta tags -->
+    <meta property="og:title" content="{% block og_title %}Ayurvedic Healthcare Portal{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Traditional healing with modern technology{% endblock %}">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.url }}">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Additional CSS -->
+    {% block extra_css %}{% endblock %}
+</head>
+<body {% if session.user_type %}data-user-type="{{ session.user_type }}"{% endif %}>
+    <!-- Header -->
+    <header class="header">
+        <nav class="navbar container">
+            <a href="{{ url_for('index') }}" class="logo">
+                Ayurvedic Portal
+            </a>
+
+            <ul class="nav-links">
+                {% if session.user_id %}
+                    <!-- Dashboard Navigation -->
+                    <!-- <li>
+                        {% if session.user_type == 'normal' %}
+                            <a href="{{ url_for('normal_dashboard') }}">Dashboard</a>
+                        {% elif session.user_type == 'doctor' %}
+                            <a href="{{ url_for('doctor_dashboard') }}">Dashboard</a>
+                        {% endif %}
+                    </li> -->
+
+                    <!-- Navbar Options -->
+                    <li class="navbar-options">
+                        <!-- Search Bar -->
+                        <div class="search-container">
+                            <button class="search-toggle" title="Search">
+                                <span class="search-icon">🔍</span>
+                            </button>
+                            <div class="search-bar">
+                                <input type="text" class="search-input" placeholder="Search doctors, treatments, medicines...">
+                                <button class="search-submit" title="Search">
+                                    <span>🔍</span>
+                                </button>
+                                <button class="search-close" title="Close Search">
+                                    <span>✖</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Notifications -->
+                        <div class="notifications-container">
+                            <button class="notifications-toggle" title="Notifications">
+                                <span class="notification-icon">🔔</span>
+                                <span class="notification-badge">3</span>
+                            </button>
+                            <div class="notifications-dropdown">
+                                <div class="notifications-header">
+                                    <h4>Notifications</h4>
+                                    <button class="mark-all-read">Mark all read</button>
+                                </div>
+                                <div class="notifications-list">
+                                    <div class="notification-item unread">
+                                        <div class="notification-icon-wrapper">📅</div>
+                                        <div class="notification-content">
+                                            <div class="notification-title">Appointment Reminder</div>
+                                            <div class="notification-text">Your appointment with Dr. Rajesh Kumar is tomorrow at 10:00 AM</div>
+                                            <div class="notification-time">2 hours ago</div>
+                                        </div>
+                                    </div>
+                                    <div class="notification-item unread">
+                                        <div class="notification-icon-wrapper">💊</div>
+                                        <div class="notification-content">
+                                            <div class="notification-title">Prescription Ready</div>
+                                            <div class="notification-text">Your Ayurvedic medicines are ready for pickup</div>
+                                            <div class="notification-time">1 day ago</div>
+                                        </div>
+                                    </div>
+                                    <div class="notification-item">
+                                        <div class="notification-icon-wrapper">🌟</div>
+                                        <div class="notification-content">
+                                            <div class="notification-title">Wellness Goal Achieved</div>
+                                            <div class="notification-text">Congratulations! You've completed 7 days of meditation</div>
+                                            <div class="notification-time">3 days ago</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="notifications-footer">
+                                    <button class="view-all-notifications">View All Notifications</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Language Translation -->
+                        <div class="language-container">
+                            <button class="language-toggle" title="Language">
+                                <span class="language-icon">🌐</span>
+                                <span class="language-text">EN</span>
+                            </button>
+                            <div class="language-dropdown">
+                                <div class="language-header">
+                                    <h4>Select Language</h4>
+                                </div>
+                                <div class="language-list">
+                                    <button class="language-option active" data-lang="en">
+                                        <span class="language-flag">🇺🇸</span>
+                                        <span class="language-name">English</span>
+                                        <span class="language-check">✓</span>
+                                    </button>
+                                    <button class="language-option" data-lang="hi">
+                                        <span class="language-flag">🇮🇳</span>
+                                        <span class="language-name">हिन्दी (Hindi)</span>
+                                        <span class="language-check">✓</span>
+                                    </button>
+                                    <button class="language-option" data-lang="sa">
+                                        <span class="language-flag">🕉️</span>
+                                        <span class="language-name">संस्कृत (Sanskrit)</span>
+                                        <span class="language-check">✓</span>
+                                    </button>
+                                    <button class="language-option" data-lang="ta">
+                                        <span class="language-flag">🇮🇳</span>
+                                        <span class="language-name">தமிழ் (Tamil)</span>
+                                        <span class="language-check">✓</span>
+                                    </button>
+                                    <button class="language-option" data-lang="bn">
+                                        <span class="language-flag">🇮🇳</span>
+                                        <span class="language-name">বাংলা (Bengali)</span>
+                                        <span class="language-check">✓</span>
+                                    </button>
+                                    <button class="language-option" data-lang="gu">
+                                        <span class="language-flag">🇮🇳</span>
+                                        <span class="language-name">ગુજરાતી (Gujarati)</span>
+                                        <span class="language-check">✓</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dark/Light Mode Toggle -->
+                        <div class="theme-container">
+                            <button class="theme-toggle" title="Toggle Dark/Light Mode">
+                                <span class="theme-icon light-icon">☀️</span>
+                                <span class="theme-icon dark-icon">🌙</span>
+                                <span class="theme-text">Light</span>
+                            </button>
+                        </div>
+                    </li>
+
+                    <!-- Profile Dropdown -->
+                    <li class="profile-dropdown">
+    <button class="profile-trigger" title="Profile Menu">
+        <div class="profile-nav-photo me-2">
+            {% if session.user_type == 'normal' %}
+                {% set profile_photo = get_user_profile_photo(session.user_id) %}
+                {% if profile_photo %}
+                    <img src="{{ url_for('static', filename=profile_photo) }}" alt="Profile" class="nav-profile-img">
+                {% else %}
+                    <div class="nav-profile-default">{{ session.user_name[0].upper() if session.user_name else 'U' }}</div>
+                {% endif %}
+            {% elif session.user_type == 'doctor' %}
+                {% set profile_photo = get_doctor_profile_photo(session.user_id) %}
+                {% if profile_photo %}
+                    <img src="{{ url_for('static', filename=profile_photo) }}" alt="Profile" class="nav-profile-img">
+                {% else %}
+                    <div class="nav-profile-default">{{ session.user_name[0].upper() if session.user_name else 'D' }}</div>
+                {% endif %}
+            {% else %}
+                <div class="nav-profile-default">{{ session.user_name[0].upper() if session.user_name else 'U' }}</div>
+            {% endif %}
+        </div>
+        <span class="profile-name">{{ session.user_name }}</span>
+        <span class="dropdown-arrow">▼</span>
+    </button>
+
+    <div class="profile-menu">
+        <div class="profile-header">
+            <div class="profile-nav-photo me-2">
+                {% if session.user_type == 'normal' %}
+                    {% set profile_photo = get_user_profile_photo(session.user_id) %}
+                    {% if profile_photo %}
+                        <img src="{{ url_for('static', filename=profile_photo) }}" alt="Profile" class="nav-profile-img">
+                    {% else %}
+                        <div class="nav-profile-default">{{ session.user_name[0].upper() if session.user_name else 'U' }}</div>
+                    {% endif %}
+                {% elif session.user_type == 'doctor' %}
+                    {% set profile_photo = get_doctor_profile_photo(session.user_id) %}
+                    {% if profile_photo %}
+                        <img src="{{ url_for('static', filename=profile_photo) }}" alt="Profile" class="nav-profile-img">
+                    {% else %}
+                        <div class="nav-profile-default">{{ session.user_name[0].upper() if session.user_name else 'D' }}</div>
+                    {% endif %}
+                {% else %}
+                    <div class="nav-profile-default">{{ session.user_name[0].upper() if session.user_name else 'U' }}</div>
+                {% endif %}
+            </div>
+            <div class="profile-info">
+                <div class="profile-name-large">{{ session.user_name }}</div>
+                <div class="profile-email">{{ session.user_email }}</div>
+                {% if session.user_type == 'doctor' %}
+                    <div class="profile-role">{{ session.specialty or 'Ayurvedic Doctor' }}</div>
+                {% else %}
+                    <div class="profile-role">Patient</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="profile-divider"></div>
+
+        <ul class="profile-options">
+            <!-- MY PROFILE - Both Users -->
+            <li>
+                {% if session.user_type == 'normal' %}
+                    <a href="{{ url_for('profile') }}" class="profile-option" onclick="viewProfile()">
+                        <span class="option-icon">👤</span>
+                        <span class="option-text">My Profile</span>
+                    </a>
+                {% elif session.user_type == 'doctor' %}
+                    <a href="{{ url_for('doctor_profile') }}" class="profile-option" onclick="viewProfile()">
+                        <span class="option-icon">👤</span>
+                        <span class="option-text">My Profile</span>
+                    </a>
+                {% endif %}
+            </li>
+
+            <!-- DASHBOARD - Both Users -->
+            <li>
+                {% if session.user_type == 'normal' %}
+                    <a href="{{ url_for('normal_dashboard') }}" class="profile-option" onclick="viewDashboard()">
+                        <span class="option-icon">📊</span>
+                        <span class="option-text">Dashboard</span>
+                    </a>
+                {% elif session.user_type == 'doctor' %}
+                    <a href="{{ url_for('doctor_dashboard') }}" class="profile-option" onclick="viewDashboard()">
+                        <span class="option-icon">📊</span>
+                        <span class="option-text">Dashboard</span>
+                    </a>
+                {% endif %}
+            </li>
+
+            <!-- SETTINGS - Both Users -->
+            <li>
+                <a href="{{ url_for('settings') }}" class="profile-option" onclick="viewSettings()">
+                    <span class="option-icon">⚙️</span>
+                    <span class="option-text">Settings</span>
+                </a>
+            </li>
+
+            <!-- MY CART - Normal Users Only -->
+            {% if session.user_type == 'normal' %}
+            <li>
+                <a href="#cart" class="profile-option" onclick="viewCart()">
+                    <span class="option-icon">🛒</span>
+                    <span class="option-text">My Cart</span>
+                    <span class="cart-badge">3</span>
+                </a>
+            </li>
+            {% endif %}
+
+            <!-- LOGOUT - Both Users -->
+            <li>
+                <a href="{{ url_for('logout') }}" class="profile-option logout-option">
+                    <span class="option-icon">🚪</span>
+                    <span class="option-text">Logout</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</li>
+
+                {% else %}
+                    <!-- Guest Navigation -->
+                    <li><a href="{{ url_for('index') }}">Home</a></li>
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#services">Services</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                    <li><a href="{{ url_for('signin') }}" class="btn btn-outline">Sign In</a></li>
+                    <li><a href="{{ url_for('signup') }}" class="btn btn-primary">Sign Up</a></li>
+                {% endif %}
+            </ul>
+
+            <!-- Mobile menu button -->
+            <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </nav>
+    </header>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="alert-container">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'error' if category == 'error' else 'info' }}">
+                        {{ message }}
+                        <button onclick="this.parentElement.remove()" style="float: right; background: none; border: none; font-size: 1.2rem; cursor: pointer;">&times;</button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>About Ayurveda</h3>
+                    <p>Ancient wisdom meets modern healthcare. Experience holistic healing through traditional Ayurvedic practices combined with contemporary medical approaches.</p>
+                </div>
+
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="{{ url_for('index') }}">Home</a></li>
+                        <li><a href="#about">About Us</a></li>
+                        <li><a href="#services">Services</a></li>
+                        <li><a href="#doctors">Find Doctors</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-section">
+                    <h3>Services</h3>
+                    <ul>
+                        <li><a href="#panchakarma">Panchakarma</a></li>
+                        <li><a href="#consultation">Online Consultation</a></li>
+                        <li><a href="#herbal-medicine">Herbal Medicine</a></li>
+                        <li><a href="#yoga-therapy">Yoga Therapy</a></li>
+                        <li><a href="#diet-planning">Diet Planning</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-section">
+                    <h3>Contact Info</h3>
+                    <ul>
+                        <li>📧 info@ayurvedicportal.com</li>
+                        <li>📱 +91 98765 43210</li>
+                        <li>📍 123 Wellness Street, Health City</li>
+                        <li>🕐 24/7 Online Support</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; {{ current_year }} Ayurvedic Healthcare Portal. All rights reserved. | Made with ❤️ for better health</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+    <!-- Additional JavaScript -->
+    {% block extra_js %}{% endblock %}
+
+    <!-- Google Analytics (replace with your GA tracking ID) -->
+    <script>
+        // Google Analytics code
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+        // Replace 'UA-XXXXXXX-X' with your actual Google Analytics tracking ID
+        // ga('create', 'UA-XXXXXXX-X', 'auto');
+        // ga('send', 'pageview');
+
+        // Override all alert functions to disable them
+function showAlert(message, type) { 
+    // Only log to console for debugging (optional)
+    console.log(`${type}: ${message}`);
+    // No visual alerts
+}
+
+// Disable AyurvedicPortal alerts if you have them
+window.AyurvedicPortal = window.AyurvedicPortal || {};
+window.AyurvedicPortal.showAlert = function(message, type) {
+    console.log(`${type}: ${message}`);
+};
+
+// Disable native browser alerts too
+window.alert = function(message) {
+    console.log(`Alert: ${message}`);
+};
+
+console.log('🔕 All alert messages have been disabled');
+    </script>
+</body>
+</html>

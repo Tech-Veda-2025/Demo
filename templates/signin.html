@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In - Ayurvedic Healthcare Portal{% endblock %}
+
+{% block description %}Sign in to your Ayurvedic Healthcare Portal account to access personalized health services and connect with certified practitioners.{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row" style="justify-content: center; align-items: center; min-height: 60vh;">
+        <div class="col-6" style="max-width: 500px;">
+            <div class="card">
+                <div class="card-header text-center">
+                    <h1 class="card-title" style="font-size: 2.5rem;">🕉️ Sign In</h1>
+                    <p style="color: var(--text-secondary); margin-bottom: 0;">Welcome back to your wellness journey</p>
+                </div>
+
+                <form id="signin-form" method="POST" action="{{ url_for('signin') }}">
+                    <!-- Email Field -->
+                    <div class="form-group">
+                        <label for="email" class="form-label">
+                            📧 Email Address
+                        </label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            name="email" 
+                            class="form-control" 
+                            placeholder="Enter your email address"
+                            required
+                            autocomplete="email"
+                        >
+                    </div>
+
+                    <!-- Password Field -->
+                    <div class="form-group">
+                        <label for="password" class="form-label">
+                            🔒 Password
+                        </label>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            class="form-control" 
+                            placeholder="Enter your password"
+                            required
+                            autocomplete="current-password"
+                        >
+                    </div>
+
+                    <!-- Remember Me and Forgot Password -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" name="remember_me" style="margin-right: 0.5rem;">
+                            Remember me
+                        </label>
+                        <a href="#" style="color: var(--secondary-color); text-decoration: none;">
+                            Forgot Password?
+                        </a>
+                    </div>
+
+                    <!-- Sign In Button -->
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-bottom: 1rem;">
+                        Sign In
+                    </button>
+                </form>
+
+                <!-- Divider -->
+                <div style="text-align: center; margin: 1.5rem 0; position: relative;">
+                    <span style="background-color: var(--white); padding: 0 1rem; color: var(--text-secondary); position: relative; z-index: 1;">
+                        Or sign in with
+                    </span>
+                    <div style="position: absolute; top: 50%; left: 0; right: 0; height: 1px; background-color: var(--border-color);"></div>
+                </div>
+
+                <!-- Google Sign In -->
+                <button id="google-signin" class="btn btn-google" style="margin-bottom: 1rem;">
+                    Sign in with Google
+                </button>
+
+                <!-- Sign Up Link -->
+                <div class="text-center">
+                    <p style="margin: 0; color: var(--text-secondary);">
+                        Don't have an account? 
+                        <a href="{{ url_for('signup') }}" style="color: var(--secondary-color); text-decoration: none; font-weight: 500;">
+                            Sign up here
+                        </a>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Features Preview -->
+            <div class="text-center mt-3">
+                <h3 style="color: var(--primary-color); margin-bottom: 1rem;">🌟 What awaits you</h3>
+                <div style="display: flex; justify-content: space-around; text-align: center;">
+                    <div>
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">🩺</div>
+                        <small>Expert Consultations</small>
+                    </div>
+                    <div>
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📱</div>
+                        <small>Digital Health Records</small>
+                    </div>
+                    <div>
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">🌿</div>
+                        <small>Personalized Care</small>
+                    </div>
+                    <div>
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">🧘</div>
+                        <small>Holistic Wellness</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Information Section -->
+    <div class="row mt-3">
+        <div class="col-4">
+            <div class="card text-center">
+                <div style="font-size: 3rem; margin-bottom: 1rem; color: var(--secondary-color);">🔐</div>
+                <h4 style="color: var(--primary-color);">Secure & Private</h4>
+                <p>Your health information is protected with industry-standard encryption and privacy measures.</p>
+            </div>
+        </div>
+
+        <div class="col-4">
+            <div class="card text-center">
+                <div style="font-size: 3rem; margin-bottom: 1rem; color: var(--secondary-color);">⚡</div>
+                <h4 style="color: var(--primary-color);">Fast & Convenient</h4>
+                <p>Access your health dashboard instantly and book appointments with just a few clicks.</p>
+            </div>
+        </div>
+
+        <div class="col-4">
+            <div class="card text-center">
+                <div style="font-size: 3rem; margin-bottom: 1rem; color: var(--secondary-color);">🤝</div>
+                <h4 style="color: var(--primary-color);">Expert Support</h4>
+                <p>Connect with certified Ayurvedic practitioners and get personalized wellness guidance.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Enhanced form validation for sign-in
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('signin-form');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+
+    // Auto-focus on email field
+    emailInput.focus();
+
+    // Form submission handling
+    form.addEventListener('submit', function(e) {
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+
+        // Basic validation
+        if (!email || !password) {
+            e.preventDefault();
+            AyurvedicPortal.showAlert('Please fill in all fields', 'error');
+            return false;
+        }
+
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            e.preventDefault();
+            AyurvedicPortal.showAlert('Please enter a valid email address', 'error');
+            emailInput.focus();
+            return false;
+        }
+
+        // Show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Signing In...';
+        submitBtn.disabled = true;
+
+        // Re-enable button after 3 seconds (in case of server error)
+        setTimeout(() => {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }, 3000);
+    });
+
+    // Password visibility toggle (handled by main.js)
+    // Real-time validation feedback
+    emailInput.addEventListener('blur', function() {
+        const email = this.value.trim();
+        if (email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                this.style.borderColor = '#f44336';
+            } else {
+                this.style.borderColor = 'var(--secondary-color)';
+            }
+        }
+    });
+
+    // Clear validation styles on input
+    [emailInput, passwordInput].forEach(input => {
+        input.addEventListener('input', function() {
+            this.style.borderColor = 'var(--border-color)';
+        });
+    });
+
+    // Handle Enter key for better UX
+    [emailInput, passwordInput].forEach((input, index) => {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (index === 0) {
+                    passwordInput.focus();
+                } else {
+                    form.submit();
+                }
+            }
+        });
+    });
+});
+
+// Handle forgot password click
+document.querySelector('a[href="#"]:contains("Forgot Password")').addEventListener('click', function(e) {
+    e.preventDefault();
+    AyurvedicPortal.showAlert('Password reset functionality will be available soon. Please contact support if you need assistance.', 'info');
+});
+
+// Demo credentials helper (for development/testing)
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    console.log('Demo credentials:');
+    console.log('Normal User: john@example.com / password123');
+    console.log('Doctor: dr.rajesh@example.com / password123');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}Patient Dashboard - Ayurvedic Healthcare Portal{% endblock %}
+
+{% block description %}Manage your Ayurvedic healthcare journey. Book appointments, track your health, and connect with certified practitioners.{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Welcome Section -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card" id="card-1" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: var(--white);">
+                <div style="padding: 2rem;">
+                    <h1 style="color: var(--white); margin-bottom: 0.5rem;">🙏 Namaste, {{ session.user_name }}!</h1>
+                    <p style="margin-bottom: 1rem; opacity: 0.9;">Welcome to your personal wellness dashboard. Take charge of your health journey with Ayurvedic wisdom.</p>
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <div>
+                            <strong>Member since:</strong> 
+                            <span>{{ current_month }} {{ current_year }}</span>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <div style="background: rgba(255,255,255,0.2); padding: 0.5rem 1rem; border-radius: var(--border-radius); display: inline-block;">
+                                ✨ Wellness Level: Beginner
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard">
+        <!-- Hideable Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h3 class="sidebar-title">
+                    <span class="icon">🌿</span>
+                    <span>Quick Actions</span>
+                </h3>
+                <button class="sidebar-toggle" title="Toggle sidebar">◀️</button>
+            </div>
+
+            <ul class="sidebar-menu">
+                <li><a href="#dashboard" class="active" data-tooltip="Dashboard">
+                    <span class="icon">📊</span>
+                    <span class="text">Dashboard</span>
+                </a></li>
+                <li><a href="#appointments" data-tooltip="Appointments">
+                    <span class="icon">📅</span>
+                    <span class="text">Appointments</span>
+                </a></li>
+                <li><a href="#buy-medicines" data-tooltip="Buy Medicines">
+                    <span class="icon">💊</span>
+                    <span class="text">Buy Medicines</span>
+                </a></li>
+                <li><a href="#find-doctor" data-tooltip="Find Doctor">
+                    <span class="icon">🔍</span>
+                    <span class="text">Find Doctor</span>
+                </a></li>
+                <li><a href="#ai-chat" data-tooltip="AI Chat">
+                    <span class="icon">🤖</span>
+                    <span class="text">AI Chat</span>
+                </a></li>
+                <li><a href="#prescriptions" data-tooltip="Prescriptions">
+                    <span class="icon">📋</span>
+                    <span class="text">Prescriptions</span>
+                </a></li>
+                <li><a href="#diet-plans" data-tooltip="Diet Plans">
+                    <span class="icon">🥗</span>
+                    <span class="text">Diet Plans</span>
+                </a></li>
+                <li><a href="#reports" data-tooltip="Reports">
+                    <span class="icon">📈</span>
+                    <span class="text">Reports</span>
+                </a></li>
+                <li><a href="#consultations" data-tooltip="Consultations">
+                    <span class="icon">💬</span>
+                    <span class="text">Consultations</span>
+                </a></li>
+                <li><a href="#help-support" data-tooltip="Help & Support">
+                    <span class="icon">❓</span>
+                    <span class="text">Help & Support</span>
+                </a></li>
+            </ul>
+
+            <!-- Quick Actions Section -->
+            <div class="sidebar-actions">
+                <h4>
+                    <span class="icon">⚡</span>
+                    <span>Quick Actions</span>
+                </h4>
+                <button class="btn btn-primary" onclick="bookAppointment()">
+                    <span class="icon">📅</span>
+                    <span>Book Appointment</span>
+                </button>
+                <button class="btn btn-secondary" onclick="emergencyConsult()">
+                    <span class="icon">🚨</span>
+                    <span>Emergency Consult</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Dashboard Content -->
+        <main class="dashboard-content">
+            <!-- Health Overview Cards -->
+            <div class="dashboard-card" id="dashboard-card-1">
+                <div class="icon">📅</div>
+                <h3>Upcoming Appointments</h3>
+                <div class="number" id="appointments-count">3</div>
+                <p>Next appointment in 2 days</p>
+                <button class="btn btn-outline" onclick="viewAppointments()">View All</button>
+            </div>
+
+            <div class="dashboard-card" id="dashboard-card-2">
+                <div class="icon">📋</div>
+                <h3>Health Records</h3>
+                <div class="number" id="health-records">12</div>
+                <p>Consultation records</p>
+                <button class="btn btn-outline" onclick="viewHealthRecords()">View Records</button>
+            </div>
+
+            <div class="dashboard-card" id="dashboard-card-3">
+                <div class="icon">💊</div>
+                <h3>Active Prescriptions</h3>
+                <div class="number" id="prescriptions-count">4</div>
+                <p>Current medications</p>
+                <button class="btn btn-outline" onclick="viewPrescriptions()">View Details</button>
+            </div>
+
+            <div class="dashboard-card" id="dashboard-card-4">
+                <div class="icon">👨‍⚕️</div>
+                <h3>Your Doctors</h3>
+                <div class="number" id="doctors-count">2</div>
+                <p>Consulting practitioners</p>
+                <button class="btn btn-outline" onclick="viewDoctors()">View Doctors</button>
+            </div>
+
+            <div class="dashboard-card" id="dashboard-card-5">
+                <div class="icon">🎯</div>
+                <h3>Wellness Score</h3>
+                <div class="number" id="wellness-score">78</div>
+                <p>Based on recent assessments</p>
+                <button class="btn btn-outline" onclick="viewWellnessReport()">View Report</button>
+            </div>
+
+            <div class="dashboard-card" id="dashboard-card-6">
+                <div class="icon">💬</div>
+                <h3>Recent Consultations</h3>
+                <div class="number" id="consultations">8</div>
+                <p>This month</p>
+                <button class="btn btn-outline" onclick="viewConsultations()">View History</button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Recent Activity Section -->
+    <div class="row mt-3">
+        <div class="col-6">
+            <div class="card" id="card-2">
+                <div class="card-header">
+                    <h3 class="card-title">📈 Recent Activity</h3>
+                </div>
+                <div id="recent-activity">
+                    <div style="display: flex; align-items: center; padding: 1rem 0; border-bottom: 1px solid var(--border-color);">
+                        <div style="margin-right: 1rem; font-size: 1.5rem;">📅</div>
+                        <div>
+                            <strong>Appointment Booked</strong><br>
+                            <small style="color: var(--text-secondary);">Dr. Rajesh Kumar - Tomorrow 10:00 AM</small>
+                        </div>
+                        <div style="margin-left: auto; color: var(--secondary-color);">2 hours ago</div>
+                    </div>
+                    <div style="display: flex; align-items: center; padding: 1rem 0; border-bottom: 1px solid var(--border-color);">
+                        <div style="margin-right: 1rem; font-size: 1.5rem;">💊</div>
+                        <div>
+                            <strong>Prescription Received</strong><br>
+                            <small style="color: var(--text-secondary);">Ayurvedic herbal medicines added</small>
+                        </div>
+                        <div style="margin-left: auto; color: var(--text-secondary);">1 day ago</div>
+                    </div>
+                    <div style="display: flex; align-items: center; padding: 1rem 0;">
+                        <div style="margin-right: 1rem; font-size: 1.5rem;">🧘</div>
+                        <div>
+                            <strong>Wellness Goal Achieved</strong><br>
+                            <small style="color: var(--text-secondary);">Daily meditation streak: 7 days</small>
+                        </div>
+                        <div style="margin-left: auto; color: var(--secondary-color);">1 week ago</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6">
+            <div class="card" id="card-3">
+                <div class="card-header">
+                    <h3 class="card-title">🌟 Wellness Tips</h3>
+                </div>
+                <div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <h4 style="color: var(--secondary-color); margin-bottom: 0.5rem;">🌅 Morning Routine</h4>
+                        <p>Start your day with warm lemon water and light stretching to balance your doshas and energize your body naturally.</p>
+                    </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <h4 style="color: var(--secondary-color); margin-bottom: 0.5rem;">🧘 Daily Meditation</h4>
+                        <p>Practice 10-15 minutes of meditation daily to reduce stress and maintain mental clarity. Consistency is key.</p>
+                    </div>
+                    <button class="btn btn-outline" onclick="viewMoreTips()" style="width: 100%;">
+                        View More Tips
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Dashboard functionality
+function bookAppointment() {
+    AyurvedicPortal.showAlert('Appointment booking system will be available soon!', 'info');
+}
+
+function emergencyConsultation() {
+    AyurvedicPortal.showAlert('Emergency consultation feature coming soon! For immediate help, please call +91 98765 43210', 'info');
+}
+
+function viewAppointments() {
+    AyurvedicPortal.showAlert('Viewing all appointments...', 'info');
+}
+
+function viewHealthRecords() {
+    AyurvedicPortal.showAlert('Health records viewer coming soon!', 'info');
+}
+
+function viewPrescriptions() {
+    AyurvedicPortal.showAlert('Prescription manager coming soon!', 'info');
+}
+
+function viewDoctors() {
+    AyurvedicPortal.showAlert('Doctor directory coming soon!', 'info');
+}
+
+function viewWellnessReport() {
+    AyurvedicPortal.showAlert('Wellness report generator coming soon!', 'info');
+}
+
+function viewConsultations() {
+    AyurvedicPortal.showAlert('Consultation history viewer coming soon!', 'info');
+}
+
+function viewMoreTips() {
+    AyurvedicPortal.showAlert('More wellness tips coming soon!', 'info');
+}
+
+// Initialize dashboard with sidebar demo
+// document.addEventListener('DOMContentLoaded', function() {    
+//     // Demo message for sidebar toggle
+//     setTimeout(() => {
+//         AyurvedicPortal.showAlert('💡 Tip: Click the ◀️ arrow next to "Quick Actions" to hide/show the sidebar!', 'info');
+//     }, 2000);
+// });
+</script>
+{% endblock %}

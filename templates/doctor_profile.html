@@ -1,0 +1,1646 @@
+{% extends "base.html" %}
+
+{% block title %}Doctor Profile - Ayurvedic Healthcare Portal{% endblock %}
+
+{% block description %}Manage your professional profile and medical credentials securely.{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --doctor-color: #1976D2;
+    --doctor-secondary: #1565C0;
+    --doctor-light: #E3F2FD;
+}
+
+.profile-container {
+    max-width: 1000px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.profile-header {
+    background: linear-gradient(135deg, var(--doctor-color), var(--doctor-secondary));
+    color: var(--white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    position: relative;
+}
+
+.profile-photo-container {
+    position: relative;
+}
+
+.profile-photo {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    object-fit: cover;
+    background: var(--accent-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: var(--white);
+}
+
+.profile-photo-upload {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background: var(--accent-color);
+    color: var(--white);
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: var(--transition);
+}
+
+.profile-photo-upload:hover {
+    background: #E65100;
+    transform: scale(1.1);
+}
+
+.profile-info h1 {
+    margin: 0 0 0.5rem 0;
+    font-size: 2rem;
+}
+
+.profile-info p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+.profile-completion {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.verification-status {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius);
+    display: inline-block;
+    margin-left: 1rem;
+}
+
+.verification-status.verified {
+    background: rgba(76, 175, 80, 0.3);
+}
+
+.verification-status.pending {
+    background: rgba(255, 143, 0, 0.3);
+}
+
+.doctor-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    font-weight: 600;
+}
+
+.edit-profile-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--white);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.edit-profile-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+}
+
+.profile-form {
+    background: var(--white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 2rem;
+}
+
+.form-section {
+    margin-bottom: 2rem;
+}
+
+.form-section h3 {
+    color: var(--doctor-color);
+    border-bottom: 2px solid var(--doctor-secondary);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.form-label.required::after {
+    content: " *";
+    color: #f44336;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    transition: var(--transition);
+    background: var(--white);
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--doctor-color);
+    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+.form-control:disabled {
+    background: #f5f5f5;
+    color: #666;
+    cursor: not-allowed;
+}
+
+.form-control.readonly {
+    background: #fafafa;
+    border-color: #ddd;
+    cursor: not-allowed;
+}
+
+/* View Mode Styles */
+.view-mode .form-control {
+    background: #fafafa;
+    border-color: #ddd;
+    cursor: default;
+    pointer-events: none;
+}
+
+.view-mode select.form-control {
+    background: #fafafa;
+    pointer-events: none;
+}
+
+.view-mode textarea.form-control {
+    background: #fafafa;
+    resize: none;
+    pointer-events: none;
+}
+
+.view-mode .profile-photo-upload {
+    display: none;
+}
+
+/* Edit Mode Styles */
+.edit-mode .form-control:not(.readonly) {
+    background: var(--white);
+    border-color: var(--border-color);
+    pointer-events: auto;
+}
+
+.edit-mode .form-control:not(.readonly):focus {
+    border-color: var(--doctor-color);
+    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+.edit-mode .profile-photo-upload {
+    display: flex;
+}
+
+.restricted-field {
+    position: relative;
+}
+
+.restriction-note {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.editable-note {
+    font-size: 0.8rem;
+    color: var(--doctor-color);
+    margin-top: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* Upload Button Styles */
+.upload-button-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.upload-btn {
+    background: var(--doctor-color);
+    color: var(--white);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.upload-btn:hover {
+    background: var(--doctor-secondary);
+    transform: translateY(-1px);
+    box-shadow: var(--hover-shadow);
+}
+
+.upload-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.file-input-hidden {
+    display: none;
+}
+
+.file-selected-info {
+    background: var(--doctor-light);
+    border: 1px solid var(--doctor-color);
+    border-radius: var(--border-radius);
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.file-icon {
+    font-size: 1.5rem;
+    color: var(--doctor-color);
+}
+
+.file-details {
+    flex: 1;
+}
+
+.file-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.file-size {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.file-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.file-action-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--white);
+    cursor: pointer;
+    transition: var(--transition);
+    text-decoration: none;
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.file-action-btn:hover {
+    background: var(--background-color);
+    border-color: var(--doctor-color);
+}
+
+.file-action-btn.download {
+    background: var(--doctor-color);
+    color: var(--white);
+    border-color: var(--doctor-color);
+}
+
+.file-action-btn.download:hover {
+    background: var(--doctor-secondary);
+}
+
+.file-action-btn.remove {
+    background: #f44336;
+    color: var(--white);
+    border-color: #f44336;
+}
+
+.file-action-btn.remove:hover {
+    background: #d32f2f;
+}
+
+/* Currency Input Styles */
+.currency-input {
+    position: relative;
+}
+
+.currency-input::before {
+    content: "₹";
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    font-weight: 600;
+    z-index: 1;
+}
+
+.currency-input input {
+    padding-left: 2.5rem;
+}
+
+/* Experience Input Styles */
+.experience-input {
+    position: relative;
+}
+
+.experience-input::after {
+    content: "years";
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    pointer-events: none;
+}
+
+.experience-input input {
+    padding-right: 3.5rem;
+}
+
+.select-wrapper {
+    position: relative;
+}
+
+.select-wrapper::after {
+    content: "▼";
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--text-secondary);
+}
+
+.view-mode .select-wrapper::after {
+    display: none;
+}
+
+select.form-control {
+    appearance: none;
+    background-image: none;
+    padding-right: 2.5rem;
+}
+
+.btn-group {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.view-mode .btn-group {
+    display: none;
+}
+
+.edit-mode .btn-group {
+    display: flex;
+}
+
+.profile-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: var(--white);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    text-align: center;
+    transition: var(--transition);
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--hover-shadow);
+}
+
+.stat-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    color: var(--doctor-color);
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--doctor-color);
+    margin-bottom: 0.25rem;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.completion-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius);
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.completion-badge.complete {
+    background: var(--doctor-light);
+    color: var(--doctor-color);
+}
+
+.completion-badge.incomplete {
+    background: #FFF3E0;
+    color: var(--accent-color);
+}
+
+.mode-indicator {
+    position: fixed;
+    top: 100px;
+    right: 20px;
+    background: var(--doctor-color);
+    color: var(--white);
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius);
+    font-size: 0.8rem;
+    font-weight: 500;
+    z-index: 1000;
+    transition: var(--transition);
+}
+
+.mode-indicator.edit-mode {
+    background: var(--accent-color);
+}
+
+.edit-mode-banner {
+    background: linear-gradient(135deg, #FF6F00, #FF8F00);
+    color: var(--white);
+    padding: 0.75rem 1rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
+    display: none;
+    align-items: center;
+    gap: 0.5rem;
+    animation: slideDown 0.3s ease;
+}
+
+.edit-mode .edit-mode-banner {
+    display: flex;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.back-button {
+    position: fixed;
+    top: 100px;
+    left: 20px;
+    background: var(--white);
+    color: var(--doctor-color);
+    border: 2px solid var(--doctor-color);
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    z-index: 1000;
+    box-shadow: var(--shadow);
+}
+
+.back-button:hover {
+    background: var(--doctor-color);
+    color: var(--white);
+    transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+    .profile-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+
+    .edit-profile-btn {
+        position: static;
+        margin-top: 1rem;
+        align-self: center;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .btn-group {
+        flex-direction: column;
+    }
+
+    .btn-group .btn {
+        width: 100%;
+    }
+
+    .mode-indicator {
+        top: 80px;
+        right: 10px;
+        font-size: 0.7rem;
+        padding: 0.4rem 0.8rem;
+    }
+
+    .file-actions {
+        flex-direction: column;
+    }
+
+    .upload-button-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .upload-btn {
+        justify-content: center;
+    }
+
+    .back-button {
+        top: 80px;
+        left: 10px;
+        width: 45px;
+        height: 45px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<a href="javascript:history.back()" class="back-button" title="Go Back">
+    ←
+</a>
+
+<div class="profile-container">
+    <!-- Mode Indicator -->
+    <div class="mode-indicator" id="mode-indicator">
+        👁️ View Mode
+    </div>
+
+    <!-- Profile Header -->
+    <div class="profile-header">
+        <div class="profile-photo-container">
+            {% if profile.profile_photo %}
+                <img src="{{ url_for('static', filename=profile.profile_photo) }}" alt="Profile Photo" class="profile-photo">
+            {% else %}
+                <div class="profile-photo">
+                    {{ profile.full_name[0].upper() if profile.full_name else 'D' }}
+                </div>
+            {% endif %}
+            <button class="profile-photo-upload" onclick="document.getElementById('photo-upload').click()" title="Change Photo">
+                📷
+            </button>
+        </div>
+        <div class="profile-info">
+            <h1>Dr. {{ profile.full_name or 'Complete Your Profile' }}</h1>
+            <p>{{ profile.email_id }}</p>
+            <p>Doctor ID: #{{ profile.doctor_id }}</p>
+            {% if profile.specialty %}
+                <p><strong>{{ profile.specialty }}</strong></p>
+            {% endif %}
+            <div class="doctor-badge">
+                🩺 Medical Professional
+                <span class="verification-status {{ 'verified' if profile.is_verified else 'pending' }}">
+                    {{ '✅ Verified' if profile.is_verified else '⏳ Pending Verification' }}
+                </span>
+            </div>
+            <div class="profile-completion">
+                {% if profile.is_profile_complete %}
+                    <span class="completion-badge complete">✅ Profile Complete</span>
+                {% else %}
+                    <span class="completion-badge incomplete">⚠️ Profile Incomplete</span>
+                {% endif %}
+            </div>
+        </div>
+        <button class="edit-profile-btn" id="edit-profile-btn" onclick="toggleEditMode()">
+            ✏️ Edit Profile
+        </button>
+    </div>
+
+    <!-- Hidden Photo Upload Form -->
+    <form id="photo-upload-form" action="{{ url_for('upload_doctor_photo') }}" method="post" enctype="multipart/form-data" style="display: none;">
+        <input type="file" id="photo-upload" name="profile_photo" accept="image/*" onchange="uploadPhoto()">
+    </form>
+
+    <!-- Profile Stats -->
+    <div class="profile-stats">
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-value">{{ '150' if profile.is_profile_complete else '0' }}</div>
+            <div class="stat-label">Total Patients</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📅</div>
+            <div class="stat-value">{{ profile.experience or '0' }}</div>
+            <div class="stat-label">Years Experience</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">💰</div>
+            <div class="stat-value">₹{{ profile.consultant_fee or '0' }}</div>
+            <div class="stat-label">Consultation Fee</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">⭐</div>
+            <div class="stat-value">{{ '4.9' if profile.is_profile_complete else 'N/A' }}</div>
+            <div class="stat-label">Rating</div>
+        </div>
+    </div>
+
+    <!-- Edit Mode Banner -->
+    <div class="edit-mode-banner">
+        <span style="font-size: 1.2rem;">✏️</span>
+        <strong>Edit Mode Active</strong> - You can now modify your profile information. Click "Save Profile" to save changes or "Cancel" to discard.
+    </div>
+
+    <!-- Profile Form -->
+    <form class="profile-form view-mode" action="{{ url_for('update_doctor_profile') }}" method="post" id="profile-form" enctype="multipart/form-data">
+        <!-- Personal Information -->
+        <div class="form-section">
+            <h3>👤 Personal Information</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="full_name" class="form-label required">Full Name</label>
+                    <input type="text" id="full_name" name="full_name" class="form-control" 
+                           value="{{ profile.full_name or '' }}" required maxlength="150" readonly>
+                </div>
+                <div class="form-group restricted-field">
+                    <label for="email_id" class="form-label">Email ID</label>
+                    <input type="email" id="email_id" name="email_id" class="form-control readonly" 
+                           value="{{ profile.email_id or '' }}" readonly>
+                    <div class="restriction-note">🔒 Email cannot be changed</div>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group editable-field">
+                    <label for="mobile_number" class="form-label">Mobile Number</label>
+                    <input type="tel" id="mobile_number" name="mobile_number" class="form-control" 
+                           value="{{ profile.mobile_number or '' }}" maxlength="20" 
+                           placeholder="+91 98765 43210" readonly>
+                    <div class="editable-note edit-mode" style="display: none;">✏️ You can edit your mobile number</div>
+                </div>
+                <div class="form-group">
+                    <label for="date_of_birth" class="form-label">Date of Birth</label>
+                    <input type="date" id="date_of_birth" name="date_of_birth" class="form-control" 
+                           value="{{ profile.date_of_birth or '' }}" readonly>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="gender" class="form-label">Gender</label>
+                    <div class="select-wrapper">
+                        <select id="gender" name="gender" class="form-control" disabled>
+                            <option value="">Select Gender</option>
+                            <option value="Male" {{ 'selected' if profile.gender == 'Male' }}>Male</option>
+                            <option value="Female" {{ 'selected' if profile.gender == 'Female' }}>Female</option>
+                            <option value="Other" {{ 'selected' if profile.gender == 'Other' }}>Other</option>
+                            <option value="Prefer not to say" {{ 'selected' if profile.gender == 'Prefer not to say' }}>Prefer not to say</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="marital_status" class="form-label">Marital Status</label>
+                    <div class="select-wrapper">
+                        <select id="marital_status" name="marital_status" class="form-control" disabled>
+                            <option value="">Select Status</option>
+                            <option value="Single" {{ 'selected' if profile.marital_status == 'Single' }}>Single</option>
+                            <option value="Married" {{ 'selected' if profile.marital_status == 'Married' }}>Married</option>
+                            <option value="Divorced" {{ 'selected' if profile.marital_status == 'Divorced' }}>Divorced</option>
+                            <option value="Widowed" {{ 'selected' if profile.marital_status == 'Widowed' }}>Widowed</option>
+                            <option value="Prefer not to say" {{ 'selected' if profile.marital_status == 'Prefer not to say' }}>Prefer not to say</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Professional Information (NEW SECTION FOR DOCTORS) -->
+        <div class="form-section">
+            <h3>🩺 Professional Information</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="specialty" class="form-label required">Medical Specialty</label>
+                    <div class="select-wrapper">
+                        <select id="specialty" name="specialty" class="form-control" required disabled>
+                            <option value="">Select Specialty</option>
+                            <option value="General Medicine" {{ 'selected' if profile.specialty == 'General Medicine' }}>General Medicine</option>
+                            <option value="Cardiology" {{ 'selected' if profile.specialty == 'Cardiology' }}>Cardiology</option>
+                            <option value="Dermatology" {{ 'selected' if profile.specialty == 'Dermatology' }}>Dermatology</option>
+                            <option value="Orthopedics" {{ 'selected' if profile.specialty == 'Orthopedics' }}>Orthopedics</option>
+                            <option value="Gynecology" {{ 'selected' if profile.specialty == 'Gynecology' }}>Gynecology</option>
+                            <option value="Pediatrics" {{ 'selected' if profile.specialty == 'Pediatrics' }}>Pediatrics</option>
+                            <option value="Neurology" {{ 'selected' if profile.specialty == 'Neurology' }}>Neurology</option>
+                            <option value="Psychiatry" {{ 'selected' if profile.specialty == 'Psychiatry' }}>Psychiatry</option>
+                            <option value="Ayurveda" {{ 'selected' if profile.specialty == 'Ayurveda' }}>Ayurveda</option>
+                            <option value="Homeopathy" {{ 'selected' if profile.specialty == 'Homeopathy' }}>Homeopathy</option>
+                            <option value="Unani" {{ 'selected' if profile.specialty == 'Unani' }}>Unani</option>
+                            <option value="Naturopathy" {{ 'selected' if profile.specialty == 'Naturopathy' }}>Naturopathy</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="experience" class="form-label required">Years of Experience</label>
+                    <div class="experience-input">
+                        <input type="number" id="experience" name="experience" class="form-control" 
+                               value="{{ profile.experience or '' }}" required min="0" max="50" readonly>
+                    </div>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="qualification" class="form-label required">Qualification</label>
+                    <textarea id="qualification" name="qualification" class="form-control" 
+                              placeholder="Enter your medical qualifications (e.g., MBBS, MD, etc.)" 
+                              required maxlength="500" readonly>{{ profile.qualification or '' }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label for="consultant_fee" class="form-label required">Consultation Fee</label>
+                    <div class="currency-input">
+                        <input type="number" id="consultant_fee" name="consultant_fee" class="form-control" 
+                               value="{{ profile.consultant_fee or '' }}" required min="0" step="0.01" 
+                               placeholder="0.00" readonly>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Qualification Proof Upload -->
+            <div class="form-group">
+                <label for="qualification_proof" class="form-label">Qualification Proof Document</label>
+                {% if profile.qualification_proof %}
+                    <!-- Show uploaded file -->
+                    <div class="file-selected-info">
+                        <div class="file-icon">
+                            {% if profile.qualification_proof.endswith('.pdf') %}
+                                📄
+                            {% else %}
+                                🖼️
+                            {% endif %}
+                        </div>
+                        <div class="file-details">
+                            <div class="file-name">{{ profile.qualification_proof.split('/')[-1] }}</div>
+                            <div class="file-size">Qualification document uploaded</div>
+                        </div>
+                        <div class="file-actions">
+                            <a href="{{ url_for('static', filename=profile.qualification_proof) }}" 
+                               target="_blank" class="file-action-btn download">
+                                📥 Download
+                            </a>
+                            <a href="{{ url_for('static', filename=profile.qualification_proof) }}" 
+                               target="_blank" class="file-action-btn">
+                                👁️ View
+                            </a>
+                        </div>
+                    </div>
+                    <div class="restriction-note">🔒 Qualification document cannot be changed once uploaded</div>
+                {% else %}
+                    <!-- Upload Button -->
+                    <div class="upload-button-container">
+                        <button type="button" class="upload-btn" id="upload-qualification-btn" onclick="selectQualificationFile()" disabled>
+                            📎 Upload Qualification Document
+                        </button>
+                        <input type="file" id="qualification_proof" name="qualification_proof" 
+                               class="file-input-hidden" accept=".pdf,.jpeg,.jpg,.png" onchange="handleQualificationFileSelect(this)">
+                    </div>
+
+                    <!-- Selected file info -->
+                    <div class="file-selected-info" id="selected-qualification-info" style="display: none;">
+                        <div class="file-icon" id="selected-qualification-icon">📎</div>
+                        <div class="file-details">
+                            <div class="file-name" id="selected-qualification-name">No file selected</div>
+                            <div class="file-size" id="selected-qualification-size">Click "Save Profile" to upload</div>
+                        </div>
+                        <div class="file-actions">
+                            <button type="button" class="file-action-btn remove" onclick="clearSelectedQualificationFile()">
+                                🗑️ Remove
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="editable-note edit-mode" style="display: none;">
+                        ⚠️ Once uploaded, qualification documents cannot be changed. Supported: PDF, JPEG, JPG, PNG (Max 10MB)
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Health Information -->
+        <div class="form-section">
+            <h3>🩸 Health Information</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="blood_group" class="form-label">Blood Group</label>
+                    <div class="select-wrapper">
+                        <select id="blood_group" name="blood_group" class="form-control" disabled>
+                            <option value="">Select Blood Group</option>
+                            <option value="A+" {{ 'selected' if profile.blood_group == 'A+' }}>A+</option>
+                            <option value="A-" {{ 'selected' if profile.blood_group == 'A-' }}>A-</option>
+                            <option value="B+" {{ 'selected' if profile.blood_group == 'B+' }}>B+</option>
+                            <option value="B-" {{ 'selected' if profile.blood_group == 'B-' }}>B-</option>
+                            <option value="AB+" {{ 'selected' if profile.blood_group == 'AB+' }}>AB+</option>
+                            <option value="AB-" {{ 'selected' if profile.blood_group == 'AB-' }}>AB-</option>
+                            <option value="O+" {{ 'selected' if profile.blood_group == 'O+' }}>O+</option>
+                            <option value="O-" {{ 'selected' if profile.blood_group == 'O-' }}>O-</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="emergency_contact_name" class="form-label">Emergency Contact Name</label>
+                    <input type="text" id="emergency_contact_name" name="emergency_contact_name" class="form-control" 
+                           value="{{ profile.emergency_contact_name or '' }}" maxlength="150" readonly>
+                </div>
+            </div>
+        </div>
+
+        <!-- Identity Verification -->
+        <div class="form-section">
+            <h3>🆔 Identity Verification</h3>
+            <div class="form-row">
+                <div class="form-group restricted-field">
+                    <label for="identity_proof_type" class="form-label">Identity Proof Type</label>
+                    <div class="select-wrapper">
+                        <select id="identity_proof_type" name="identity_proof_type" class="form-control" disabled>
+                            <option value="">Select Identity Proof</option>
+                            <option value="Aadhar Card" {{ 'selected' if profile.identity_proof_type == 'Aadhar Card' }}>Aadhar Card</option>
+                            <option value="Pan Card" {{ 'selected' if profile.identity_proof_type == 'Pan Card' }}>Pan Card</option>
+                            <option value="Passport" {{ 'selected' if profile.identity_proof_type == 'Passport' }}>Passport</option>
+                            <option value="Driving License" {{ 'selected' if profile.identity_proof_type == 'Driving License' }}>Driving License</option>
+                        </select>
+                    </div>
+                    {% if profile.identity_proof_type %}
+                        <div class="restriction-note">🔒 Identity proof type cannot be changed</div>
+                    {% endif %}
+                </div>
+                <div class="form-group restricted-field">
+                    <label for="identity_proof_number" class="form-label">Identity Proof Number</label>
+                    <input type="text" id="identity_proof_number" name="identity_proof_number" class="form-control readonly" 
+                           value="{{ profile.identity_proof_number or '' }}" readonly maxlength="50">
+                    {% if profile.identity_proof_number %}
+                        <div class="restriction-note">🔒 Identity proof number cannot be changed</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Identity Proof File Upload -->
+            <div class="form-group">
+                <label for="identity_proof_file" class="form-label">Identity Proof Document</label>
+                {% if profile.identity_proof_file %}
+                    <!-- Show uploaded file -->
+                    <div class="file-selected-info">
+                        <div class="file-icon">
+                            {% if profile.identity_proof_file.endswith('.pdf') %}
+                                📄
+                            {% else %}
+                                🖼️
+                            {% endif %}
+                        </div>
+                        <div class="file-details">
+                            <div class="file-name">{{ profile.identity_proof_file.split('/')[-1] }}</div>
+                            <div class="file-size">Identity document uploaded</div>
+                        </div>
+                        <div class="file-actions">
+                            <a href="{{ url_for('static', filename=profile.identity_proof_file) }}" 
+                               target="_blank" class="file-action-btn download">
+                                📥 Download
+                            </a>
+                            <a href="{{ url_for('static', filename=profile.identity_proof_file) }}" 
+                               target="_blank" class="file-action-btn">
+                                👁️ View
+                            </a>
+                        </div>
+                    </div>
+                    <div class="restriction-note">🔒 Identity proof document cannot be changed once uploaded</div>
+                {% else %}
+                    <!-- Upload Button -->
+                    <div class="upload-button-container">
+                        <button type="button" class="upload-btn" id="upload-identity-btn" onclick="selectIdentityFile()" disabled>
+                            📎 Upload Document
+                        </button>
+                        <input type="file" id="identity_proof_file" name="identity_proof_file" 
+                               class="file-input-hidden" accept=".pdf,.jpeg,.jpg,.png" onchange="handleIdentityFileSelect(this)">
+                    </div>
+
+                    <!-- Selected file info -->
+                    <div class="file-selected-info" id="selected-identity-info" style="display: none;">
+                        <div class="file-icon" id="selected-identity-icon">📎</div>
+                        <div class="file-details">
+                            <div class="file-name" id="selected-identity-name">No file selected</div>
+                            <div class="file-size" id="selected-identity-size">Click "Save Profile" to upload</div>
+                        </div>
+                        <div class="file-actions">
+                            <button type="button" class="file-action-btn remove" onclick="clearSelectedIdentityFile()">
+                                🗑️ Remove
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="editable-note edit-mode" style="display: none;">
+                        ⚠️ Once uploaded, the identity proof document cannot be changed. Supported: PDF, JPEG, JPG, PNG (Max 10MB)
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Address Information -->
+        <div class="form-section">
+            <h3>🏠 Address Information</h3>
+            <div class="form-group">
+                <label for="address" class="form-label required">Address</label>
+                <textarea id="address" name="address" class="form-control" 
+                          placeholder="Enter your complete address..." 
+                          required maxlength="500" readonly>{{ profile.address or '' }}</textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="city" class="form-label required">City</label>
+                    <input type="text" id="city" name="city" class="form-control" 
+                           value="{{ profile.city or '' }}" required maxlength="100" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="state" class="form-label required">State</label>
+                    <input type="text" id="state" name="state" class="form-control" 
+                           value="{{ profile.state or '' }}" required maxlength="100" readonly>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="country" class="form-label required">Country</label>
+                    <input type="text" id="country" name="country" class="form-control" 
+                           value="{{ profile.country or 'India' }}" required maxlength="100" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="pincode" class="form-label required">Pincode</label>
+                    <input type="text" id="pincode" name="pincode" class="form-control" 
+                           value="{{ profile.pincode or '' }}" required maxlength="10" pattern="[0-9]{6}" readonly>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions (Hidden in View Mode) -->
+        <div class="btn-group">
+            <button type="button" class="btn btn-secondary" onclick="cancelEdit()">
+                ❌ Cancel
+            </button>
+            <button type="submit" class="btn btn-primary">
+                💾 Save Profile
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Doctor Profile View/Edit Mode Management with Upload Button
+let isEditMode = false;
+let originalFormData = {};
+let selectedQualificationFile = null;
+let selectedIdentityFile = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    initProfileForm();
+    initFormValidation();
+    initMobileNumberFormatting();
+    storeOriginalData();
+
+    // Show welcome message in view mode
+    setTimeout(() => {
+        if (typeof AyurvedicPortal !== 'undefined') {
+            AyurvedicPortal.showAlert('👁️ You are in View Mode. Click "Edit Profile" to make changes to your information.', 'info');
+        }
+    }, 1000);
+});
+
+function storeOriginalData() {
+    const form = document.getElementById('profile-form');
+    const formData = new FormData(form);
+    originalFormData = {};
+
+    for (let [key, value] of formData.entries()) {
+        originalFormData[key] = value;
+    }
+}
+
+function toggleEditMode() {
+    const form = document.getElementById('profile-form');
+    const editBtn = document.getElementById('edit-profile-btn');
+    const modeIndicator = document.getElementById('mode-indicator');
+    const uploadBtns = document.querySelectorAll('.upload-btn');
+
+    isEditMode = !isEditMode;
+
+    if (isEditMode) {
+        // Switch to Edit Mode
+        form.classList.remove('view-mode');
+        form.classList.add('edit-mode');
+        editBtn.innerHTML = '❌ Cancel Edit';
+        editBtn.onclick = cancelEdit;
+        modeIndicator.innerHTML = '✏️ Edit Mode';
+        modeIndicator.classList.add('edit-mode');
+
+        // Enable form fields (except restricted ones)
+        enableFormFields();
+
+        // Enable upload buttons if no files are uploaded
+        uploadBtns.forEach(btn => {
+            btn.disabled = false;
+        });
+
+        // Show editable notes
+        document.querySelectorAll('.editable-note').forEach(note => {
+            note.style.display = 'flex';
+        });
+
+        showAlert('✏️ Edit Mode Activated! You can now modify your profile information.', 'success');
+
+    } else {
+        // Switch to View Mode
+        switchToViewMode();
+    }
+}
+
+function cancelEdit() {
+    if (confirm('Are you sure you want to cancel editing? Any unsaved changes will be lost.')) {
+        restoreOriginalData();
+        clearAllSelectedFiles();
+        switchToViewMode();
+        showAlert('❌ Edit cancelled. Your original information has been restored.', 'info');
+    }
+}
+
+function switchToViewMode() {
+    const form = document.getElementById('profile-form');
+    const editBtn = document.getElementById('edit-profile-btn');
+    const modeIndicator = document.getElementById('mode-indicator');
+    const uploadBtns = document.querySelectorAll('.upload-btn');
+
+    isEditMode = false;
+
+    // Switch to View Mode
+    form.classList.remove('edit-mode');
+    form.classList.add('view-mode');
+    editBtn.innerHTML = '✏️ Edit Profile';
+    editBtn.onclick = toggleEditMode;
+    modeIndicator.innerHTML = '👁️ View Mode';
+    modeIndicator.classList.remove('edit-mode');
+
+    // Disable form fields
+    disableFormFields();
+
+    // Disable upload buttons
+    uploadBtns.forEach(btn => {
+        btn.disabled = true;
+    });
+
+    // Hide editable notes
+    document.querySelectorAll('.editable-note').forEach(note => {
+        note.style.display = 'none';
+    });
+}
+
+function enableFormFields() {
+    // Enable input fields (except readonly ones)
+    document.querySelectorAll('input:not(.readonly)').forEach(input => {
+        input.removeAttribute('readonly');
+    });
+
+    // Enable select fields (except restricted ones)
+    document.querySelectorAll('select:not(.readonly)').forEach(select => {
+        if (!select.closest('.restricted-field') || !select.closest('.restricted-field').querySelector('.restriction-note')) {
+            select.removeAttribute('disabled');
+        }
+    });
+
+    // Enable textareas
+    document.querySelectorAll('textarea').forEach(textarea => {
+        textarea.removeAttribute('readonly');
+    });
+
+    // Handle identity proof restrictions
+    handleIdentityProofRestrictions();
+}
+
+function disableFormFields() {
+    // Disable all input fields
+    document.querySelectorAll('input').forEach(input => {
+        if (!input.classList.contains('readonly')) {
+            input.setAttribute('readonly', 'readonly');
+        }
+    });
+
+    // Disable all select fields
+    document.querySelectorAll('select').forEach(select => {
+        select.setAttribute('disabled', 'disabled');
+    });
+
+    // Disable textareas
+    document.querySelectorAll('textarea').forEach(textarea => {
+        textarea.setAttribute('readonly', 'readonly');
+    });
+}
+
+function handleIdentityProofRestrictions() {
+    const identityType = document.getElementById('identity_proof_type');
+    const identityNumber = document.getElementById('identity_proof_number');
+
+    if (identityType && identityType.value) {
+        identityType.setAttribute('disabled', 'disabled');
+    } else {
+        identityType.removeAttribute('disabled');
+    }
+
+    if (identityNumber && identityNumber.value) {
+        identityNumber.setAttribute('readonly', 'readonly');
+    } else {
+        identityNumber.removeAttribute('readonly');
+    }
+}
+
+function restoreOriginalData() {
+    Object.keys(originalFormData).forEach(key => {
+        const field = document.querySelector(`[name="${key}"]`);
+        if (field && field.type !== 'file') {
+            field.value = originalFormData[key] || '';
+        }
+    });
+}
+
+// File Upload Functions
+function selectQualificationFile() {
+    if (!isEditMode) {
+        showAlert('Please enable Edit Mode first to upload qualification documents.', 'warning');
+        return;
+    }
+
+    const fileInput = document.getElementById('qualification_proof');
+    if (fileInput) {
+        fileInput.click();
+    }
+}
+
+function selectIdentityFile() {
+    if (!isEditMode) {
+        showAlert('Please enable Edit Mode first to upload identity proof.', 'warning');
+        return;
+    }
+
+    const fileInput = document.getElementById('identity_proof_file');
+    if (fileInput) {
+        fileInput.click();
+    }
+}
+
+function handleQualificationFileSelect(input) {
+    if (!isEditMode) {
+        showAlert('Please enable Edit Mode first to upload files.', 'warning');
+        return;
+    }
+
+    const file = input.files[0];
+    if (!file) return;
+
+    if (validateFile(file)) {
+        selectedQualificationFile = file;
+        showSelectedFileInfo(file, 'qualification');
+        showAlert(`✅ File "${file.name}" selected. Click "Save Profile" to upload.`, 'success');
+    } else {
+        input.value = '';
+    }
+}
+
+function handleIdentityFileSelect(input) {
+    if (!isEditMode) {
+        showAlert('Please enable Edit Mode first to upload files.', 'warning');
+        return;
+    }
+
+    const file = input.files[0];
+    if (!file) return;
+
+    if (validateFile(file)) {
+        selectedIdentityFile = file;
+        showSelectedFileInfo(file, 'identity');
+        showAlert(`✅ File "${file.name}" selected. Click "Save Profile" to upload.`, 'success');
+    } else {
+        input.value = '';
+    }
+}
+
+function validateFile(file) {
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowedTypes.includes(file.type) && !file.name.match(/\.(pdf|jpeg|jpg|png)$/i)) {
+        showAlert('❌ Invalid file type. Please upload PDF, JPEG, JPG, or PNG files only.', 'error');
+        return false;
+    }
+
+    // Validate file size (10MB limit)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+        showAlert('❌ File size too large. Please upload files smaller than 10MB.', 'error');
+        return false;
+    }
+
+    return true;
+}
+
+function showSelectedFileInfo(file, type) {
+    const fileInfo = document.getElementById(`selected-${type}-info`);
+    const fileName = document.getElementById(`selected-${type}-name`);
+    const fileSize = document.getElementById(`selected-${type}-size`);
+    const fileIcon = document.getElementById(`selected-${type}-icon`);
+
+    if (fileInfo && fileName && fileSize && fileIcon) {
+        fileName.textContent = file.name;
+        fileSize.textContent = `Size: ${formatFileSize(file.size)} - Click "Save Profile" to upload`;
+
+        // Set appropriate icon
+        if (file.name.toLowerCase().endsWith('.pdf')) {
+            fileIcon.textContent = '📄';
+        } else {
+            fileIcon.textContent = '🖼️';
+        }
+
+        fileInfo.style.display = 'flex';
+    }
+}
+
+function clearSelectedQualificationFile() {
+    selectedQualificationFile = null;
+    const fileInput = document.getElementById('qualification_proof');
+    const fileInfo = document.getElementById('selected-qualification-info');
+
+    if (fileInput) fileInput.value = '';
+    if (fileInfo) fileInfo.style.display = 'none';
+
+    showAlert('Qualification file selection cleared.', 'info');
+}
+
+function clearSelectedIdentityFile() {
+    selectedIdentityFile = null;
+    const fileInput = document.getElementById('identity_proof_file');
+    const fileInfo = document.getElementById('selected-identity-info');
+
+    if (fileInput) fileInput.value = '';
+    if (fileInfo) fileInfo.style.display = 'none';
+
+    showAlert('Identity file selection cleared.', 'info');
+}
+
+function clearAllSelectedFiles() {
+    clearSelectedQualificationFile();
+    clearSelectedIdentityFile();
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function initProfileForm() {
+    const form = document.getElementById('profile-form');
+
+    form.addEventListener('input', function() {
+        if (isEditMode) {
+            updateFormChangeState();
+        }
+    });
+
+    // Intercept form submission in view mode
+    form.addEventListener('submit', function(e) {
+        if (!isEditMode) {
+            e.preventDefault();
+            showAlert('Please click "Edit Profile" first to make changes.', 'warning');
+            return false;
+        }
+    });
+}
+
+function initFormValidation() {
+    const form = document.getElementById('profile-form');
+
+    form.addEventListener('submit', function(e) {
+        if (isEditMode && !validateForm()) {
+            e.preventDefault();
+        }
+    });
+
+    // Number field validations
+    const experience = document.getElementById('experience');
+    const consultantFee = document.getElementById('consultant_fee');
+    const pincode = document.getElementById('pincode');
+
+    if (experience) {
+        experience.addEventListener('input', function() {
+            if (isEditMode) {
+                let value = parseInt(this.value);
+                if (value < 0) this.value = 0;
+                if (value > 50) this.value = 50;
+            }
+        });
+    }
+
+    if (consultantFee) {
+        consultantFee.addEventListener('input', function() {
+            if (isEditMode) {
+                let value = parseFloat(this.value);
+                if (value < 0) this.value = 0;
+            }
+        });
+    }
+
+    if (pincode) {
+        pincode.addEventListener('input', function() {
+            if (isEditMode) {
+                this.value = this.value.replace(/[^0-9]/g, '');
+                if (this.value.length > 6) {
+                    this.value = this.value.slice(0, 6);
+                }
+            }
+        });
+    }
+}
+
+function initMobileNumberFormatting() {
+    const mobileFields = ['mobile_number', 'emergency_contact_number'];
+
+    mobileFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.addEventListener('input', function() {
+                if (isEditMode) {
+                    formatMobileNumber(this);
+                }
+            });
+
+            field.addEventListener('blur', function() {
+                if (isEditMode) {
+                    validateMobileNumber(this);
+                }
+            });
+        }
+    });
+}
+
+function formatMobileNumber(field) {
+    let value = field.value.replace(/[^0-9+\s\-\(\)]/g, '');
+    if (value.length > 15) {
+        value = value.slice(0, 15);
+    }
+    field.value = value;
+}
+
+function validateMobileNumber(field) {
+    const value = field.value.trim();
+    if (!value) return true;
+
+    const cleanNumber = value.replace(/[^0-9]/g, '');
+    if (cleanNumber.length < 10) {
+        showFieldError(field, 'Mobile number must be at least 10 digits');
+        return false;
+    }
+
+    clearFieldError(field);
+    return true;
+}
+
+function validateForm() {
+    if (!isEditMode) return false;
+
+    let isValid = true;
+    const requiredFields = document.querySelectorAll('[required]');
+
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            showFieldError(field, 'This field is required');
+            isValid = false;
+        } else {
+            clearFieldError(field);
+        }
+    });
+
+    // Validate consultant fee
+    const consultantFee = document.getElementById('consultant_fee');
+    if (consultantFee.value && parseFloat(consultantFee.value) <= 0) {
+        showFieldError(consultantFee, 'Consultation fee must be greater than 0');
+        isValid = false;
+    }
+
+    // Validate experience
+    const experience = document.getElementById('experience');
+    if (experience.value && (parseInt(experience.value) < 0 || parseInt(experience.value) > 50)) {
+        showFieldError(experience, 'Experience must be between 0 and 50 years');
+        isValid = false;
+    }
+
+    const mobileFields = ['mobile_number', 'emergency_contact_number'];
+    mobileFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field && !validateMobileNumber(field)) {
+            isValid = false;
+        }
+    });
+
+    const pincode = document.getElementById('pincode');
+    if (pincode.value && !/^[0-9]{6}$/.test(pincode.value)) {
+        showFieldError(pincode, 'Please enter a valid 6-digit pincode');
+        isValid = false;
+    }
+
+    if (isValid) {
+        // Update stored data on successful save
+        storeOriginalData();
+        showAlert('✅ Doctor profile updated successfully!', 'success');
+        setTimeout(() => {
+            switchToViewMode();
+        }, 1000);
+    }
+
+    return isValid;
+}
+
+function showFieldError(field, message) {
+    field.style.borderColor = '#f44336';
+
+    let errorElement = field.parentNode.querySelector('.field-error');
+    if (!errorElement) {
+        errorElement = document.createElement('div');
+        errorElement.className = 'field-error';
+        errorElement.style.color = '#f44336';
+        errorElement.style.fontSize = '0.8rem';
+        errorElement.style.marginTop = '0.25rem';
+        field.parentNode.appendChild(errorElement);
+    }
+
+    errorElement.textContent = message;
+}
+
+function clearFieldError(field) {
+    field.style.borderColor = '';
+    const errorElement = field.parentNode.querySelector('.field-error');
+    if (errorElement) {
+        errorElement.remove();
+    }
+}
+
+function updateFormChangeState() {
+    const saveButton = document.querySelector('.btn-primary');
+    if (saveButton && isEditMode) {
+        saveButton.style.background = 'linear-gradient(135deg, #FF6F00, #FF8F00)';
+        saveButton.innerHTML = '💾 Save Changes';
+    }
+}
+
+function uploadPhoto() {
+    if (!isEditMode) {
+        showAlert('Please enable Edit Mode first to upload a photo.', 'warning');
+        return;
+    }
+
+    const form = document.getElementById('photo-upload-form');
+    const fileInput = document.getElementById('photo-upload');
+
+    if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        if (!allowedTypes.includes(file.type)) {
+            showAlert('Please select a valid image file (JPG, PNG, or GIF)', 'error');
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            showAlert('File size must be less than 5MB', 'error');
+            return;
+        }
+
+        showAlert('Uploading profile photo...', 'info');
+        form.submit();
+    }
+}
+
+// Simple alert function
+function showAlert(message, type) {
+    if (typeof AyurvedicPortal !== 'undefined') {
+        AyurvedicPortal.showAlert(message, type);
+    } else {
+        console.log(`${type.toUpperCase()}: ${message}`);
+        alert(message);
+    }
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // Ctrl/Cmd + E to toggle edit mode
+    if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+        e.preventDefault();
+        if (!isEditMode) {
+            toggleEditMode();
+        } else {
+            cancelEdit();
+        }
+    }
+
+    // Escape to cancel edit mode
+    if (e.key === 'Escape' && isEditMode) {
+        cancelEdit();
+    }
+});
+
+console.log('Doctor Profile View/Edit Mode system initialized');
+console.log('Keyboard shortcuts: Ctrl+E (Toggle Edit), Escape (Cancel Edit)');
+console.log('File uploads: Click Upload buttons in Edit Mode');
+</script>
+{% endblock %}
