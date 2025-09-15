@@ -18,7 +18,9 @@ import uuid
 import mysql.connector
 from werkzeug.security import check_password_hash, generate_password_hash
 import re
-
+import requests
+import json
+from datetime import datetime
 
 
 app = Flask(__name__)
@@ -1412,6 +1414,127 @@ def get_doctor_profile_photo(user_id):
 
 # Register the function as Jinja2 global (add this after your app initialization)
 app.jinja_env.globals.update(get_doctor_profile_photo=get_doctor_profile_photo)
+
+@app.route('/ai-chat')
+@login_required
+def ai_chat():
+    """AI Chat page for both user types"""
+    user_type = session.get('user_type', 'normal')
+    
+    if user_type == 'normal':
+        return render_template('ai_chat.html', 
+                             chat_title="AI Health Assistant",
+                             user_type=user_type,
+                             welcome_message="Hello! I'm your AI Health Assistant. Ask me about health, medicines, symptoms, or wellness tips.")
+    else:
+        return render_template('ai_chat.html', 
+                             chat_title="AI Medical Assistant",
+                             user_type=user_type,
+                             welcome_message="Hello Doctor! I'm your AI Medical Assistant. I can help with medical research, diagnosis support, and treatment options.")
+
+@app.route('/ai-chat/send', methods=['POST'])
+@login_required
+def send_ai_message():
+    """Send message to AI and get response"""
+    try:
+        data = request.get_json()
+        user_message = data.get('message', '').strip()
+        user_type = session.get('user_type', 'normal')
+        
+        if not user_message:
+            return jsonify({'error': 'Message is required'}), 400
+        
+        # Create context-aware prompt
+        system_prompt = get_system_prompt(user_type)
+        full_prompt = f"{system_prompt}\n\nUser: {user_message}\nAssistant:"
+        
+        # Call Ollama API
+        ollama_response = call_ollama(full_prompt)
+        
+        if ollama_response:
+            # Save to database
+            save_chat_message(session['user_id'], user_type, user_message, ollama_response)
+            
+            return jsonify({
+                'response': ollama_response,
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
+        else:
+            return jsonify({'error': 'AI service unavailable. Please try again.'}), 500
+            
+    except Exception as e:
+        print(f"AI Chat error: {e}")
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
+
+def call_ollama(prompt):
+    """Call Ollama API with the prompt"""
+    try:
+        url = "http://localhost:11434/api/generate"
+        
+        payload = {
+            "model": "llama3.2:3b",
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": 0.7,
+                "top_p": 0.9,
+                "max_tokens": 2000
+            }
+        }
+        
+        response = requests.post(url, json=payload, timeout=60)
+        
+        if response.status_code == 200:
+            result = response.json()
+            return result.get('response', '').strip()
+        else:
+            print(f"Ollama API error: {response.status_code}")
+            return None
+            
+    except Exception as e:
+        print(f"Ollama connection error: {e}")
+        return None
+
+def get_system_prompt(user_type):
+    """Get appropriate system prompt based on user type"""
+    if user_type == 'doctor':
+        return """You are an AI Medical Assistant helping healthcare professionals. You provide:
+        - Evidence-based medical information
+        - Differential diagnosis support
+        - Treatment option suggestions
+        - Latest medical research insights
+        - Drug interactions and contraindications
+        - Clinical guidelines and protocols
+        
+        Always remind doctors to use clinical judgment and verify information. Focus on Ayurvedic and modern medicine integration."""
+    else:
+        return """You are an AI Health Assistant for patients. You provide:
+        - General health information and wellness tips
+        - Basic symptom information (not diagnosis)
+        - Healthy lifestyle suggestions
+        - Nutrition and exercise advice
+        - Medicine information and basic uses
+        - When to seek medical attention
+        
+        Always remind users to consult healthcare professionals for medical advice. Focus on Ayurvedic wellness and preventive care."""
+
+def save_chat_message(user_id, user_type, message, response):
+    """Save chat message to database"""
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        
+        cursor.execute("""
+            INSERT INTO ai_chat_history (user_id, user_type, message, response, created_at)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (user_id, user_type, message, response, datetime.now()))
+        
+        connection.commit()
+        cursor.close()
+        connection.close()
+        
+    except Exception as e:
+        print(f"Save chat error: {e}")
 
 
 
