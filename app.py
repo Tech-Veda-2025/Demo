@@ -1035,7 +1035,7 @@ def login_required(f):
 @app.route('/doctor_profile')
 @login_required
 def doctor_profile():
-    """Doctor profile page with View/Edit mode and file upload support"""
+    """Doctor profile page with verification status sync"""
     if session.get('user_type') != 'doctor':
         flash('Access denied. This page is only for doctors.', 'error')
         return redirect(url_for('index'))
@@ -1048,16 +1048,23 @@ def doctor_profile():
     try:
         cursor = connection.cursor(dictionary=True)
 
-        # Get or create doctor profile
+        # Use dp.user_id to join and filter
         cursor.execute("""
-            SELECT * FROM doctor_user_profiles 
-            WHERE user_id = %s
+            SELECT dp.*, 
+                   du.verification_status, 
+                   du.verified_at, 
+                   du.verified_by,
+                   admin.full_name AS verified_by_admin
+            FROM doctor_user_profiles dp
+            LEFT JOIN doctor_users du ON dp.user_id = du.id
+            LEFT JOIN admin_users admin ON du.verified_by = admin.id
+            WHERE dp.user_id = %s
         """, (session['user_id'],))
 
         profile = cursor.fetchone()
 
         if not profile:
-            # Create default profile if doesn't exist
+            # Insert using user_id, not dp.id
             cursor.execute("""
                 INSERT INTO doctor_user_profiles (user_id, full_name, email_id, country) 
                 VALUES (%s, %s, %s, %s)
@@ -1065,10 +1072,17 @@ def doctor_profile():
 
             connection.commit()
 
-            # Fetch the newly created profile
+            # Re-fetch with correct join
             cursor.execute("""
-                SELECT * FROM doctor_user_profiles 
-                WHERE user_id = %s
+                SELECT dp.*, 
+                       du.verification_status, 
+                       du.verified_at, 
+                       du.verified_by,
+                       admin.full_name AS verified_by_admin
+                FROM doctor_user_profiles dp
+                LEFT JOIN doctor_users du ON dp.user_id = du.id
+                LEFT JOIN admin_users admin ON du.verified_by = admin.id
+                WHERE dp.user_id = %s
             """, (session['user_id'],))
 
             profile = cursor.fetchone()
@@ -1078,7 +1092,7 @@ def doctor_profile():
 
         return render_template('doctor_profile.html', profile=profile)
 
-    except mysql.connector.Error as err:
+    except Exception as err:
         flash('Error loading profile. Please try again.', 'error')
         print(f"Doctor profile error: {err}")
         return redirect(url_for('doctor_dashboard'))
@@ -2056,6 +2070,62 @@ def admin_doctor_users():
         print(f"Admin doctor users error: {e}")
         flash('Error loading doctors.', 'error')
         return redirect(url_for('admin_dashboard'))
+    
+@app.route('/admin/doctor-users/add', methods=['GET', 'POST'])
+@admin_required
+def admin_add_doctor_user():
+    """Add new docotr user"""
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '').strip()
+
+        if not all([name, email, password]):
+            flash('All fields are required.', 'error')
+            return render_template('admin/add_doctor_user.html')
+
+        connection = get_db_connection()
+        if connection:
+            try:
+                cursor = connection.cursor()
+
+                # Check if username/email exists
+                cursor.execute("""
+                    SELECT id FROM doctor_users WHERE email = %s
+                """, (email))
+
+                if cursor.fetchone():
+                    flash('Email already exists.', 'error')
+                    cursor.close()
+                    connection.close()
+                    return render_template('admin/add_doctor_user.html')
+
+                # Create user
+                password_hash = generate_password_hash(password)
+                cursor.execute("""
+                    INSERT INTO doctor_users (name, email, password_hash, 
+                                            is_active, created_by_admin, created_at)
+                    VALUES (%s, %s, %s, %s, TRUE, TRUE, %s)
+                """, (name, email, password_hash, datetime.now()))
+
+                connection.commit()
+
+                # Log activity
+                log_admin_activity(session['admin_id'], 'ADD_USER', 'normal', 
+                                 cursor.lastrowid, {'name': name, 'email': email})
+
+                cursor.close()
+                connection.close()
+
+                flash('Doctor User created successfully!', 'success')
+                return redirect(url_for('admin_doctor_users'))
+
+            except Exception as e:
+                print(f"Add normal user error: {e}")
+                flash('Error creating user.', 'error')
+
+    return render_template('admin/add_doctor_user.html')
+
 
 @app.route('/admin/doctor-users/<int:doctor_id>/verify', methods=['POST'])
 @admin_required

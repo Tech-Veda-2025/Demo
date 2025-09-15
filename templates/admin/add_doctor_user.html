@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}Add Doctor User – Admin Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+.admin-container {
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+.page-header {
+    background: var(--white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 2rem;
+    text-align: center;
+}
+.page-title {
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+.page-icon {
+    font-size: 2rem;
+    color: #1976D2;
+}
+.form-container {
+    background: var(--white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+}
+.form-group {
+    margin-bottom: 1.5rem;
+}
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.form-label.required::after {
+    content: " *";
+    color: #f44336;
+}
+.form-control {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    transition: var(--transition);
+}
+.form-control:focus {
+    outline: none;
+    border-color: #1976D2;
+    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+.form-help {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-color);
+    margin-top: 2rem;
+}
+.btn {
+    padding: 1rem 2rem;
+    border-radius: var(--border-radius);
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    font-weight: 500;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.btn-primary {
+    background: #1976D2;
+    color: var(--white);
+}
+.btn-primary:hover {
+    background: #1565C0;
+    transform: translateY(-1px);
+}
+.btn-secondary {
+    background: var(--background-color);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+.btn-secondary:hover {
+    background: var(--border-color);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="page-header">
+        <h1 class="page-title">
+            <span class="page-icon">➕</span>
+            Add Doctor User
+        </h1>
+        <p>Create a new doctor account</p>
+    </div>
+
+    <div class="form-container">
+        <form method="POST" action="{{ url_for('admin_add_doctor_user') }}">
+            <div class="form-group">
+                <label for="email" class="form-label required">Email Address</label>
+                <input type="email" id="email" name="email" class="form-control"
+                       placeholder="doctor@example.com" required>
+                <div class="form-help">Email must be unique and valid</div>
+            </div>
+
+            <div class="form-group">
+                <label for="full_name" class="form-label required">Full Name</label>
+                <input type="text" id="full_name" name="full_name" class="form-control"
+                       placeholder="Enter full name" required maxlength="150">
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label required">Password</label>
+                <input type="password" id="password" name="password" class="form-control"
+                       placeholder="Enter secure password" required minlength="6">
+                <div class="form-help">Password must be at least 6 characters long</div>
+            </div>
+
+            <div class="form-group">
+                <label for="confirm_password" class="form-label required">Confirm Password</label>
+                <input type="password" id="confirm_password" name="confirm_password" class="form-control"
+                       placeholder="Confirm password" required>
+            </div>
+
+            <div class="form-group">
+                <label for="specialty" class="form-label required">Specialty</label>
+                <input type="text" id="specialty" name="specialty" class="form-control"
+                       placeholder="e.g., Cardiology" required maxlength="100">
+            </div>
+
+            <div class="form-group">
+                <label for="qualification" class="form-label required">Qualification</label>
+                <textarea id="qualification" name="qualification" class="form-control"
+                          placeholder="e.g., MBBS, MD in Internal Medicine" required rows="3"></textarea>
+            </div>
+
+            <div class="form-actions">
+                <a href="{{ url_for('admin_doctor_users') }}" class="btn btn-secondary">
+                    ❌ Cancel
+                </a>
+                <button type="submit" class="btn btn-primary" id="submit-btn">
+                    ✅ Create Doctor
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

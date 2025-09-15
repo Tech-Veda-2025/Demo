@@ -312,6 +312,9 @@
             Manage Doctor Users
         </h1>
         <div class="header-actions">
+            <a href="{{ url_for('admin_add_doctor_user') }}" class="btn btn-primary">
+                ➕ Add User
+            </a>
             <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
                 🏠 Dashboard
             </a>
@@ -371,7 +374,7 @@
                                 {{ doctor.name[0].upper() if doctor.name else 'D' }}
                             </div>
                             <div class="doctor-details">
-                                <h4>Dr. {{ doctor.name or 'No Name' }}</h4>
+                                <h4>{{ doctor.name or 'No Name' }}</h4>
                                 <p>{{ doctor.email }}</p>
                                 {% if doctor.specialty %}
                                     <span class="doctor-specialty">{{ doctor.specialty }}</span>

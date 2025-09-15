@@ -565,6 +565,60 @@ select.form-control {
     display: flex;
 }
 
+/* Verification Status Styles */
+.verification-status-section {
+    margin: 1rem 0;
+}
+
+.verification-badge {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
+    border: 2px solid;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.verification-badge.verified {
+    border-color: #4CAF50;
+    background: rgba(76, 175, 80, 0.2);
+}
+
+.verification-badge.pending {
+    border-color: #FF9800;
+    background: rgba(255, 152, 0, 0.2);
+}
+
+.verification-badge.rejected {
+    border-color: #F44336;
+    background: rgba(244, 67, 54, 0.2);
+}
+
+.badge-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.badge-content {
+    flex: 1;
+}
+
+.badge-content strong {
+    display: block;
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+    color: var(--white);
+}
+
+.badge-content small {
+    display: block;
+    opacity: 0.9;
+    font-size: 0.9rem;
+    color: var(--white);
+}
+
 @keyframes slideDown {
     from {
         opacity: 0;
@@ -675,7 +729,7 @@ select.form-control {
                 <img src="{{ url_for('static', filename=profile.profile_photo) }}" alt="Profile Photo" class="profile-photo">
             {% else %}
                 <div class="profile-photo">
-                    {{ profile.full_name[0].upper() if profile.full_name else 'D' }}
+                    {{ profile.full_name[0].upper() if profile.name else 'D' }}
                 </div>
             {% endif %}
             <button class="profile-photo-upload" onclick="document.getElementById('photo-upload').click()" title="Change Photo">
@@ -683,17 +737,44 @@ select.form-control {
             </button>
         </div>
         <div class="profile-info">
-            <h1>Dr. {{ profile.full_name or 'Complete Your Profile' }}</h1>
-            <p>{{ profile.email_id }}</p>
-            <p>Doctor ID: #{{ profile.doctor_id }}</p>
+            <h1>{{ profile.full_name or 'Complete Your Profile' }}</h1>
+            <p>{{ profile.email_id}}</p>
+            <p>Doctor ID: #{{ profile.user_id }}</p>
             {% if profile.specialty %}
                 <p><strong>{{ profile.specialty }}</strong></p>
             {% endif %}
-            <div class="doctor-badge">
-                🩺 Medical Professional
-                <span class="verification-status {{ 'verified' if profile.is_verified else 'pending' }}">
-                    {{ '✅ Verified' if profile.is_verified else '⏳ Pending Verification' }}
-                </span>
+            <!-- VERIFICATION STATUS DISPLAY -->
+            <div class="verification-status-section">
+                {% if profile.verification_status == 'verified' %}
+                    <div class="verification-badge verified">
+                        <span class="badge-icon">✅</span>
+                        <div class="badge-content">
+                            <strong>Verified Doctor</strong>
+                            {% if profile.verified_at %}
+                                <small>Verified on {{ profile.verified_at.strftime('%B %d, %Y') }}</small>
+                            {% endif %}
+                            {% if profile.verified_by_admin %}
+                                <small>Verified by {{ profile.verified_by_admin }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% elif profile.verification_status == 'rejected' %}
+                    <div class="verification-badge rejected">
+                        <span class="badge-icon">❌</span>
+                        <div class="badge-content">
+                            <strong>Verification Rejected</strong>
+                            <small>Please contact support for assistance</small>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="verification-badge pending">
+                        <span class="badge-icon">⏳</span>
+                        <div class="badge-content">
+                            <strong>Verification Pending</strong>
+                            <small>Your credentials are under review</small>
+                        </div>
+                    </div>
+                {% endif %}
             </div>
             <div class="profile-completion">
                 {% if profile.is_profile_complete %}
