@@ -21,6 +21,12 @@ import re
 import requests
 import json
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
+from datetime import datetime, timedelta
+import json
+from datetime import datetime
+
 
 
 app = Flask(__name__)
@@ -42,6 +48,17 @@ DB_CONFIG = {
 GOOGLE_CLIENT_ID = "your-google-client-id.apps.googleusercontent.com"
 GOOGLE_CLIENT_SECRET = "your-google-client-secret"
 GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
+
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'admin_id' not in session:
+            flash('Please log in as admin to access this page.', 'error')
+            return redirect(url_for('admin_login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 
 # ADD THIS TO YOUR app.py FILE
 
@@ -109,6 +126,10 @@ def validate_password(password):
     if not re.search(r'[0-9]', password):
         return False, "Password must contain at least one number"
     return True, "Password is valid"
+
+@app.context_processor
+def inject_datetime():
+    return {'datetime': datetime}
 
 @app.template_filter('datetime_format')
 def datetime_format(value, format='%B %d, %Y'):
@@ -1535,6 +1556,584 @@ def save_chat_message(user_id, user_type, message, response):
         
     except Exception as e:
         print(f"Save chat error: {e}")
+
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    """Admin login page"""
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        if not username or not password:
+            flash('Please enter both username and password.', 'error')
+            return render_template('admin/admin_login.html')
+
+        connection = get_db_connection()
+        if connection:
+            try:
+                cursor = connection.cursor(dictionary=True)
+                cursor.execute("""
+                    SELECT id, username, email, password_hash, full_name, role, is_active
+                    FROM admin_users 
+                    WHERE (username = %s OR email = %s) AND is_active = TRUE
+                """, (username, username))
+
+                admin = cursor.fetchone()
+
+                if admin and check_password_hash(admin['password_hash'], password):
+                    # Update last login
+                    cursor.execute("""
+                        UPDATE admin_users SET last_login = %s WHERE id = %s
+                    """, (datetime.now(), admin['id']))
+                    connection.commit()
+
+                    # Set session
+                    session['admin_id'] = admin['id']
+                    session['admin_username'] = admin['username']
+                    session['admin_name'] = admin['full_name']
+                    session['admin_role'] = admin['role']
+
+                    flash('Welcome to Admin Panel!', 'success')
+                    return redirect(url_for('admin_dashboard'))
+                else:
+                    flash('Invalid credentials.', 'error')
+
+                cursor.close()
+                connection.close()
+
+            except Exception as e:
+                print(f"Admin login error: {e}")
+                flash('Login failed. Please try again.', 'error')
+
+    return render_template('admin/admin_login.html')
+
+@app.route('/admin/logout')
+@admin_required
+def admin_logout():
+    """Admin logout"""
+    session.pop('admin_id', None)
+    session.pop('admin_username', None)
+    session.pop('admin_name', None)
+    session.pop('admin_role', None)
+    flash('Logged out successfully.', 'success')
+    return redirect(url_for('admin_login'))
+
+@app.route('/admin')
+@app.route('/admin/dashboard')
+@admin_required
+def admin_dashboard():
+    """Admin dashboard with user statistics"""
+    connection = get_db_connection()
+    if not connection:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('admin_login'))
+
+    try:
+        cursor = connection.cursor(dictionary=True)
+
+        # Get user counts
+        cursor.execute("SELECT COUNT(*) as count FROM normal_users WHERE is_active = TRUE")
+        normal_users_count = cursor.fetchone()['count']
+
+        cursor.execute("SELECT COUNT(*) as count FROM doctor_users WHERE is_active = TRUE") 
+        doctor_users_count = cursor.fetchone()['count']
+
+        cursor.execute("SELECT COUNT(*) as count FROM doctor_users WHERE verification_status = 'pending'")
+        pending_verifications = cursor.fetchone()['count']
+
+        # Recent registrations (last 7 days)
+        cursor.execute("""
+            SELECT COUNT(*) as count FROM normal_users 
+            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        """)
+        recent_normal_users = cursor.fetchone()['count']
+
+        cursor.execute("""
+            SELECT COUNT(*) as count FROM doctor_users 
+            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        """)
+        recent_doctor_users = cursor.fetchone()['count']
+
+        cursor.close()
+        connection.close()
+
+        stats = {
+            'normal_users_count': normal_users_count,
+            'doctor_users_count': doctor_users_count,
+            'total_users': normal_users_count + doctor_users_count,
+            'pending_verifications': pending_verifications,
+            'recent_normal_users': recent_normal_users,
+            'recent_doctor_users': recent_doctor_users
+        }
+
+        return render_template('admin/admin_dashboard.html', stats=stats)
+
+    except Exception as e:
+        print(f"Admin dashboard error: {e}")
+        flash('Error loading dashboard.', 'error')
+        return redirect(url_for('admin_login'))
+
+# Normal User Management Routes
+@app.route('/admin/normal-users')
+@admin_required
+def admin_normal_users():
+    """Manage normal users"""
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '')
+    status_filter = request.args.get('status', 'all')
+
+    connection = get_db_connection()
+    if not connection:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('admin_dashboard'))
+
+    try:
+        cursor = connection.cursor(dictionary=True)
+
+        # Build query with filters
+        where_clauses = []
+        params = []
+
+        if search:
+            where_clauses.append("(name LIKE %s OR email LIKE %s OR id LIKE %s)")
+            params.extend([f"%{search}%", f"%{search}%", f"%{search}%"])
+
+        if status_filter == 'active':
+            where_clauses.append("is_active = TRUE AND (banned_until IS NULL OR banned_until < NOW())")
+        elif status_filter == 'inactive':
+            where_clauses.append("is_active = FALSE")
+        elif status_filter == 'banned':
+            where_clauses.append("banned_until > NOW()")
+
+        where_sql = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+
+        # Get users with pagination
+        limit = 20
+        offset = (page - 1) * limit
+
+        cursor.execute(f"""
+            SELECT id, name, email, is_active, banned_until, 
+                   ban_reason, created_at, last_login
+            FROM normal_users 
+            {where_sql}
+            ORDER BY created_at DESC
+            LIMIT %s OFFSET %s
+        """, params + [limit, offset])
+
+        users = cursor.fetchall()
+
+        # Get total count for pagination
+        cursor.execute(f"""
+            SELECT COUNT(*) as total FROM normal_users {where_sql}
+        """, params)
+
+        total_users = cursor.fetchone()['total']
+        total_pages = (total_users + limit - 1) // limit
+
+        cursor.close()
+        connection.close()
+
+        return render_template('admin/normal_users.html', 
+                             users=users,
+                             current_page=page,
+                             total_pages=total_pages,
+                             search=search,
+                             status_filter=status_filter)
+
+    except Exception as e:
+        print(f"Admin normal users error: {e}")
+        flash('Error loading users.', 'error')
+        return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/normal-users/add', methods=['GET', 'POST'])
+@admin_required
+def admin_add_normal_user():
+    """Add new normal user"""
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '').strip()
+
+        if not all([name, email, password]):
+            flash('All fields are required.', 'error')
+            return render_template('admin/add_normal_user.html')
+
+        connection = get_db_connection()
+        if connection:
+            try:
+                cursor = connection.cursor()
+
+                # Check if username/email exists
+                cursor.execute("""
+                    SELECT id FROM normal_users WHERE email = %s
+                """, (email))
+
+                if cursor.fetchone():
+                    flash('Email already exists.', 'error')
+                    cursor.close()
+                    connection.close()
+                    return render_template('admin/add_normal_user.html')
+
+                # Create user
+                password_hash = generate_password_hash(password)
+                cursor.execute("""
+                    INSERT INTO normal_users (name, email, password_hash, 
+                                            is_active, created_by_admin, created_at)
+                    VALUES (%s, %s, %s, %s, TRUE, TRUE, %s)
+                """, (name, email, password_hash, datetime.now()))
+
+                connection.commit()
+
+                # Log activity
+                log_admin_activity(session['admin_id'], 'ADD_USER', 'normal', 
+                                 cursor.lastrowid, {'name': name, 'email': email})
+
+                cursor.close()
+                connection.close()
+
+                flash('Normal user created successfully!', 'success')
+                return redirect(url_for('admin_normal_users'))
+
+            except Exception as e:
+                print(f"Add normal user error: {e}")
+                flash('Error creating user.', 'error')
+
+    return render_template('admin/add_normal_user.html')
+
+@app.route('/admin/normal-users/<int:user_id>/edit', methods=['GET', 'POST'])
+@admin_required
+def admin_edit_normal_user(user_id):
+    """Edit normal user"""
+    connection = get_db_connection()
+    if not connection:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('admin_normal_users'))
+
+    try:
+        cursor = connection.cursor(dictionary=True)
+
+        # Get user data
+        cursor.execute("""
+            SELECT * FROM normal_users WHERE id = %s
+        """, (user_id,))
+
+        user = cursor.fetchone()
+        if not user:
+            flash('User not found.', 'error')
+            return redirect(url_for('admin_normal_users'))
+
+        if request.method == 'POST':
+            # username = request.form.get('username', '').strip()
+            email = request.form.get('email', '').strip() 
+            name = request.form.get('name', '').strip()
+            is_active = request.form.get('is_active') == 'on'
+
+            # Update user
+            cursor.execute("""
+                UPDATE normal_users 
+                SET email = %s, name = %s, is_active = %s
+                WHERE id = %s
+            """, (email, name, is_active, user_id))
+
+            connection.commit()
+
+            # Log activity
+            log_admin_activity(session['admin_id'], 'EDIT_USER', 'normal', user_id,
+                             {'name': name, 'email': email, 'is_active': is_active})
+
+            cursor.close()
+            connection.close()
+
+            flash('User updated successfully!', 'success')
+            return redirect(url_for('admin_normal_users'))
+
+        cursor.close()
+        connection.close()
+
+        return render_template('admin/edit_normal_user.html', user=user)
+
+    except Exception as e:
+        print(f"Edit normal user error: {e}")
+        flash('Error updating user.', 'error')
+        return redirect(url_for('admin_normal_users'))
+
+@app.route('/admin/normal-users/<int:user_id>/ban', methods=['POST'])
+@admin_required
+def admin_ban_normal_user(user_id):
+    """Ban normal user for custom time"""
+    ban_duration = request.form.get('ban_duration', type=int)
+    ban_unit = request.form.get('ban_unit', 'days')
+    ban_reason = request.form.get('ban_reason', '').strip()
+
+    if not ban_duration or ban_duration <= 0:
+        flash('Invalid ban duration.', 'error')
+        return redirect(url_for('admin_normal_users'))
+
+    # Calculate ban end time
+    if ban_unit == 'hours':
+        banned_until = datetime.now() + timedelta(hours=ban_duration)
+    elif ban_unit == 'days':
+        banned_until = datetime.now() + timedelta(days=ban_duration)
+    elif ban_unit == 'weeks':
+        banned_until = datetime.now() + timedelta(weeks=ban_duration)
+    elif ban_unit == 'months':
+        banned_until = datetime.now() + timedelta(days=ban_duration * 30)
+    else:
+        flash('Invalid ban unit.', 'error')
+        return redirect(url_for('admin_normal_users'))
+
+    connection = get_db_connection()
+    if connection:
+        try:
+            cursor = connection.cursor()
+
+            cursor.execute("""
+                UPDATE normal_users 
+                SET banned_until = %s, ban_reason = %s 
+                WHERE id = %s
+            """, (banned_until, ban_reason, user_id))
+
+            connection.commit()
+
+            # Log activity
+            log_admin_activity(session['admin_id'], 'BAN_USER', 'normal', user_id,
+                             {'banned_until': banned_until.isoformat(), 'reason': ban_reason})
+
+            cursor.close()
+            connection.close()
+
+            flash(f'User banned until {banned_until.strftime("%Y-%m-%d %H:%M")}.', 'success')
+        except Exception as e:
+            print(f"Ban user error: {e}")
+            flash('Error banning user.', 'error')
+
+    return redirect(url_for('admin_normal_users'))
+
+@app.route('/admin/normal-users/<int:user_id>/unban', methods=['POST'])
+@admin_required
+def admin_unban_normal_user(user_id):
+    """Unban normal user"""
+    connection = get_db_connection()
+    if connection:
+        try:
+            cursor = connection.cursor()
+
+            cursor.execute("""
+                UPDATE normal_users 
+                SET banned_until = NULL, ban_reason = NULL 
+                WHERE id = %s
+            """, (user_id,))
+
+            connection.commit()
+
+            # Log activity
+            log_admin_activity(session['admin_id'], 'UNBAN_USER', 'normal', user_id, {})
+
+            cursor.close()
+            connection.close()
+
+            flash('User unbanned successfully.', 'success')
+        except Exception as e:
+            print(f"Unban user error: {e}")
+            flash('Error unbanning user.', 'error')
+
+    return redirect(url_for('admin_normal_users'))
+
+@app.route('/admin/normal-users/<int:user_id>/delete', methods=['POST'])
+@admin_required
+def admin_delete_normal_user(user_id):
+    """Delete normal user"""
+    if session.get('admin_role') != 'super_admin':
+        flash('Only super admin can delete users.', 'error')
+        return redirect(url_for('admin_normal_users'))
+
+    connection = get_db_connection()
+    if connection:
+        try:
+            cursor = connection.cursor(dictionary=True)
+
+            # Get user info for logging
+            cursor.execute("SELECT name, email FROM normal_users WHERE id = %s", (user_id,))
+            user = cursor.fetchone()
+
+            if user:
+                # Delete user
+                cursor.execute("DELETE FROM normal_users WHERE id = %s", (user_id,))
+                connection.commit()
+
+                # Log activity
+                log_admin_activity(session['admin_id'], 'DELETE_USER', 'normal', user_id,
+                                 {'name': user['name'], 'email': user['email']})
+
+                flash('User deleted successfully.', 'success')
+            else:
+                flash('User not found.', 'error')
+
+            cursor.close()
+            connection.close()
+
+        except Exception as e:
+            print(f"Delete user error: {e}")
+            flash('Error deleting user.', 'error')
+
+    return redirect(url_for('admin_normal_users'))
+
+# Doctor User Management Routes (Similar structure)
+@app.route('/admin/doctor-users')
+@admin_required
+def admin_doctor_users():
+    """Manage doctor users with verification status"""
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '')
+    status_filter = request.args.get('status', 'all')
+    verification_filter = request.args.get('verification', 'all')
+
+    connection = get_db_connection()
+    if not connection:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('admin_dashboard'))
+
+    try:
+        cursor = connection.cursor(dictionary=True)
+
+        # Build query with filters
+        where_clauses = []
+        params = []
+
+        if search:
+            where_clauses.append("(name LIKE %s OR email LIKE %s)")
+            params.extend([f"%{search}%", f"%{search}%"])
+
+        if status_filter == 'active':
+            where_clauses.append("is_active = TRUE AND (banned_until IS NULL OR banned_until < NOW())")
+        elif status_filter == 'inactive':
+            where_clauses.append("is_active = FALSE")
+        elif status_filter == 'banned':
+            where_clauses.append("banned_until > NOW()")
+
+        if verification_filter in ['pending', 'verified', 'rejected']:
+            where_clauses.append("verification_status = %s")
+            params.append(verification_filter)
+
+        where_sql = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+
+        # Get doctors with pagination
+        limit = 20
+        offset = (page - 1) * limit
+
+        cursor.execute(f"""
+            SELECT id, name, email, is_active, banned_until, 
+                   ban_reason, verification_status, verified_at, created_at, last_login
+            FROM doctor_users 
+            {where_sql}
+            ORDER BY created_at DESC
+            LIMIT %s OFFSET %s
+        """, params + [limit, offset])
+
+        doctors = cursor.fetchall()
+
+        # Get total count for pagination
+        cursor.execute(f"""
+            SELECT COUNT(*) as total FROM doctor_users {where_sql}
+        """, params)
+
+        total_doctors = cursor.fetchone()['total']
+        total_pages = (total_doctors + limit - 1) // limit
+
+        cursor.close()
+        connection.close()
+
+        return render_template('admin/doctor_users.html', 
+                             doctors=doctors,
+                             current_page=page,
+                             total_pages=total_pages,
+                             search=search,
+                             status_filter=status_filter,
+                             verification_filter=verification_filter)
+
+    except Exception as e:
+        print(f"Admin doctor users error: {e}")
+        flash('Error loading doctors.', 'error')
+        return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/doctor-users/<int:doctor_id>/verify', methods=['POST'])
+@admin_required
+def admin_verify_doctor(doctor_id):
+    """Verify doctor user"""
+    connection = get_db_connection()
+    if connection:
+        try:
+            cursor = connection.cursor()
+
+            cursor.execute("""
+                UPDATE doctor_users 
+                SET verification_status = 'verified', 
+                    verified_at = %s, 
+                    verified_by = %s
+                WHERE id = %s
+            """, (datetime.now(), session['admin_id'], doctor_id))
+
+            connection.commit()
+
+            # Log activity
+            log_admin_activity(session['admin_id'], 'VERIFY_DOCTOR', 'doctor', doctor_id, {})
+
+            cursor.close()
+            connection.close()
+
+            flash('Doctor verified successfully!', 'success')
+        except Exception as e:
+            print(f"Verify doctor error: {e}")
+            flash('Error verifying doctor.', 'error')
+
+    return redirect(url_for('admin_doctor_users'))
+
+@app.route('/admin/doctor-users/<int:doctor_id>/reject', methods=['POST'])
+@admin_required
+def admin_reject_doctor(doctor_id):
+    """Reject doctor verification"""
+    connection = get_db_connection()
+    if connection:
+        try:
+            cursor = connection.cursor()
+
+            cursor.execute("""
+                UPDATE doctor_users 
+                SET verification_status = 'rejected'
+                WHERE id = %s
+            """, (doctor_id,))
+
+            connection.commit()
+
+            # Log activity
+            log_admin_activity(session['admin_id'], 'REJECT_DOCTOR', 'doctor', doctor_id, {})
+
+            cursor.close()
+            connection.close()
+
+            flash('Doctor verification rejected.', 'success')
+        except Exception as e:
+            print(f"Reject doctor error: {e}")
+            flash('Error rejecting doctor.', 'error')
+
+    return redirect(url_for('admin_doctor_users'))
+
+def log_admin_activity(admin_id, action, target_user_type, target_user_id, details):
+    """Log admin activity"""
+    try:
+        connection = get_db_connection()
+        if connection:
+            cursor = connection.cursor()
+            cursor.execute("""
+                INSERT INTO admin_activity_logs (admin_id, action, target_user_type, target_user_id, details)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (admin_id, action, target_user_type, target_user_id, json.dumps(details)))
+            connection.commit()
+            cursor.close()
+            connection.close()
+    except Exception as e:
+        print(f"Activity logging error: {e}")
 
 
 

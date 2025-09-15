@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Ayurvedic Healthcare Portal{% endblock %}
+
+{% block extra_css %}
+<style>
+.admin-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.admin-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: var(--white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.admin-icon {
+    font-size: 2.5rem;
+}
+
+.admin-title {
+    margin: 0 0 0.5rem 0;
+    font-size: 2rem;
+}
+
+.admin-subtitle {
+    margin: 0;
+    opacity: 0.9;
+}
+
+.admin-nav {
+    margin-left: auto;
+    display: flex;
+    gap: 1rem;
+}
+
+.nav-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--white);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--border-radius);
+    text-decoration: none;
+    transition: var(--transition);
+    font-weight: 500;
+}
+
+.nav-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+    color: var(--white);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: var(--white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    text-align: center;
+    transition: var(--transition);
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--hover-shadow);
+}
+
+.stat-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+}
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+}
+
+.stat-change {
+    font-size: 0.9rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    background: #E8F5E8;
+    color: var(--primary-color);
+}
+
+.actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.action-card {
+    background: var(--white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+}
+
+.action-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--hover-shadow);
+}
+
+.action-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    color: var(--secondary-color);
+}
+
+.action-title {
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+}
+
+.action-desc {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+}
+
+.action-btn {
+    background: var(--secondary-color);
+    color: var(--white);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--border-radius);
+    text-decoration: none;
+    transition: var(--transition);
+    display: inline-block;
+    font-weight: 500;
+}
+
+.action-btn:hover {
+    background: #2E7D32;
+    transform: translateY(-1px);
+    color: var(--white);
+}
+
+.pending-verifications {
+    background: #FFF3E0;
+    border-left: 4px solid var(--accent-color);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 2rem;
+}
+
+.pending-verifications h3 {
+    color: var(--accent-color);
+    margin-bottom: 0.5rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-header">
+        <div class="admin-icon">🔐</div>
+        <div>
+            <h1 class="admin-title">Admin Dashboard</h1>
+            <p class="admin-subtitle">Welcome back, {{ session.admin_name }}!</p>
+        </div>
+        <div class="admin-nav">
+            <a href="{{ url_for('admin_normal_users') }}" class="nav-btn">👥 Normal Users</a>
+            <a href="{{ url_for('admin_doctor_users') }}" class="nav-btn">🩺 Doctor Users</a>
+            <a href="{{ url_for('admin_logout') }}" class="nav-btn">🚪 Logout</a>
+        </div>
+    </div>
+
+    {% if stats.pending_verifications > 0 %}
+    <div class="pending-verifications">
+        <h3>⚠️ Pending Verifications</h3>
+        <p>{{ stats.pending_verifications }} doctors are waiting for verification. 
+           <a href="{{ url_for('admin_doctor_users') }}?verification=pending">Review now →</a></p>
+    </div>
+    {% endif %}
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-value">{{ stats.normal_users_count }}</div>
+            <div class="stat-label">Normal Users</div>
+            <div class="stat-change">+{{ stats.recent_normal_users }} this week</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">🩺</div>
+            <div class="stat-value">{{ stats.doctor_users_count }}</div>
+            <div class="stat-label">Doctor Users</div>
+            <div class="stat-change">+{{ stats.recent_doctor_users }} this week</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">👨‍👩‍👧‍👦</div>
+            <div class="stat-value">{{ stats.total_users }}</div>
+            <div class="stat-label">Total Users</div>
+            <div class="stat-change">Active Platform</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">⏳</div>
+            <div class="stat-value">{{ stats.pending_verifications }}</div>
+            <div class="stat-label">Pending Verifications</div>
+            <div class="stat-change">Needs Review</div>
+        </div>
+    </div>
+
+    <div class="actions-grid">
+        <div class="action-card">
+            <div class="action-icon">👥</div>
+            <h3 class="action-title">Manage Normal Users</h3>
+            <p class="action-desc">Add, edit, activate/deactivate, ban, and manage normal users of the platform.</p>
+            <a href="{{ url_for('admin_normal_users') }}" class="action-btn">Manage Users</a>
+        </div>
+
+        <div class="action-card">
+            <div class="action-icon">🩺</div>
+            <h3 class="action-title">Manage Doctor Users</h3>
+            <p class="action-desc">Verify doctors, manage their accounts, and handle doctor-specific operations.</p>
+            <a href="{{ url_for('admin_doctor_users') }}" class="action-btn">Manage Doctors</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

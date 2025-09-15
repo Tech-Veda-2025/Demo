@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Login - Ayurvedic Healthcare Portal{% endblock %}
+
+{% block extra_css %}
+<style>
+.admin-login-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 2rem;
+}
+
+.login-card {
+    background: var(--white);
+    padding: 3rem;
+    border-radius: var(--border-radius);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 400px;
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.admin-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+}
+
+.login-title {
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.login-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.form-control {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    transition: var(--transition);
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.login-btn {
+    width: 100%;
+    background: var(--primary-color);
+    color: var(--white);
+    border: none;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.login-btn:hover {
+    background: var(--secondary-color);
+    transform: translateY(-2px);
+    box-shadow: var(--hover-shadow);
+}
+
+.back-to-site {
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.back-link {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: var(--transition);
+}
+
+.back-link:hover {
+    color: var(--primary-color);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <div class="admin-icon">🔐</div>
+            <h1 class="login-title">Admin Panel</h1>
+            <p class="login-subtitle">Ayurvedic Healthcare Portal</p>
+        </div>
+
+        <form method="POST">
+            <div class="form-group">
+                <label for="username" class="form-label">Username or Email</label>
+                <input type="text" id="username" name="username" class="form-control" 
+                       placeholder="Enter your username or email" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" id="password" name="password" class="form-control" 
+                       placeholder="Enter your password" required>
+            </div>
+
+            <button type="submit" class="login-btn">
+                🚪 Login to Admin Panel
+            </button>
+        </form>
+
+        <div class="back-to-site">
+            <a href="{{ url_for('index') }}" class="back-link">← Back to Main Site</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
