@@ -1763,13 +1763,15 @@ def admin_normal_users():
 @app.route('/admin/normal-users/add', methods=['GET', 'POST'])
 @admin_required
 def admin_add_normal_user():
-    """Add new normal user"""
+    """Add new normal user - CORRECTED VERSION"""
     if request.method == 'POST':
-        name = request.form.get('name', '').strip()
+        # Get form data
         email = request.form.get('email', '').strip()
+        name = request.form.get('name', '').strip()  # Note: using 'name' to match your form
         password = request.form.get('password', '').strip()
 
-        if not all([name, email, password]):
+        # Validation
+        if not all([email, name, password]):
             flash('All fields are required.', 'error')
             return render_template('admin/add_normal_user.html')
 
@@ -1778,30 +1780,32 @@ def admin_add_normal_user():
             try:
                 cursor = connection.cursor()
 
-                # Check if username/email exists
-                cursor.execute("""
-                    SELECT id FROM normal_users WHERE email = %s
-                """, (email))
-
+                # Check if email already exists
+                cursor.execute("SELECT id FROM normal_users WHERE email = %s", (email,))
                 if cursor.fetchone():
                     flash('Email already exists.', 'error')
                     cursor.close()
                     connection.close()
                     return render_template('admin/add_normal_user.html')
 
-                # Create user
+                # Create password hash
+                from werkzeug.security import generate_password_hash
                 password_hash = generate_password_hash(password)
+
+                # Insert user - CORRECTED PARAMETER PASSING
                 cursor.execute("""
-                    INSERT INTO normal_users (name, email, password_hash, 
-                                            is_active, created_by_admin, created_at)
-                    VALUES (%s, %s, %s, %s, TRUE, TRUE, %s)
-                """, (name, email, password_hash, datetime.now()))
+                    INSERT INTO normal_users (email, name, password, is_active, created_by_admin, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, (email, name, password_hash, True, True, datetime.now()))
 
                 connection.commit()
 
                 # Log activity
-                log_admin_activity(session['admin_id'], 'ADD_USER', 'normal', 
-                                 cursor.lastrowid, {'name': name, 'email': email})
+                try:
+                    log_admin_activity(session['admin_id'], 'ADD_USER', 'normal', 
+                                     cursor.lastrowid, {'email': email, 'name': name})
+                except:
+                    pass  # Log activity is optional
 
                 cursor.close()
                 connection.close()
@@ -1811,7 +1815,7 @@ def admin_add_normal_user():
 
             except Exception as e:
                 print(f"Add normal user error: {e}")
-                flash('Error creating user.', 'error')
+                flash('Error creating user. Please try again.', 'error')
 
     return render_template('admin/add_normal_user.html')
 
@@ -2074,14 +2078,22 @@ def admin_doctor_users():
 @app.route('/admin/doctor-users/add', methods=['GET', 'POST'])
 @admin_required
 def admin_add_doctor_user():
-    """Add new docotr user"""
+    """Add new doctor user - CORRECTED VERSION"""
     if request.method == 'POST':
-        name = request.form.get('name', '').strip()
+        # Get form data - MATCH YOUR HTML FORM FIELDS
         email = request.form.get('email', '').strip()
+        full_name = request.form.get('full_name', '').strip()  # Changed from 'name' to 'full_name'
         password = request.form.get('password', '').strip()
+        specialty = request.form.get('specialty', '').strip()  # Added specialty field
+        qualification = request.form.get('qualification', '').strip()  # Added qualification field
 
-        if not all([name, email, password]):
+        # Validation - CHECK ALL REQUIRED FIELDS
+        if not all([email, full_name, password, specialty, qualification]):
             flash('All fields are required.', 'error')
+            return render_template('admin/add_doctor_user.html')
+
+        if len(password) < 6:
+            flash('Password must be at least 6 characters long.', 'error')
             return render_template('admin/add_doctor_user.html')
 
         connection = get_db_connection()
@@ -2089,43 +2101,53 @@ def admin_add_doctor_user():
             try:
                 cursor = connection.cursor()
 
-                # Check if username/email exists
-                cursor.execute("""
-                    SELECT id FROM doctor_users WHERE email = %s
-                """, (email))
-
+                # Check if email already exists
+                cursor.execute("SELECT id FROM doctor_users WHERE email = %s", (email,))
                 if cursor.fetchone():
                     flash('Email already exists.', 'error')
                     cursor.close()
                     connection.close()
                     return render_template('admin/add_doctor_user.html')
 
-                # Create user
+                # Create password hash
+                from werkzeug.security import generate_password_hash
                 password_hash = generate_password_hash(password)
+
+                # Insert doctor with ALL required fields
                 cursor.execute("""
-                    INSERT INTO doctor_users (name, email, password_hash, 
-                                            is_active, created_by_admin, created_at)
-                    VALUES (%s, %s, %s, %s, TRUE, TRUE, %s)
-                """, (name, email, password_hash, datetime.now()))
+                    INSERT INTO doctor_users (
+                        name, email, password, specialty, qualification,
+                        is_active, created_by_admin, verification_status, created_at
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    full_name, email, password_hash, specialty, qualification,
+                    True, True, 'pending', datetime.now()
+                ))
 
                 connection.commit()
 
                 # Log activity
-                log_admin_activity(session['admin_id'], 'ADD_USER', 'normal', 
-                                 cursor.lastrowid, {'name': name, 'email': email})
+                try:
+                    log_admin_activity(session['admin_id'], 'ADD_DOCTOR', 'doctor', 
+                                     cursor.lastrowid, {
+                                         'email': email, 
+                                         'name': full_name,
+                                         'specialty': specialty
+                                     })
+                except Exception as log_error:
+                    print(f"Log activity error: {log_error}")
 
                 cursor.close()
                 connection.close()
 
-                flash('Doctor User created successfully!', 'success')
+                flash('Doctor user created successfully!', 'success')
                 return redirect(url_for('admin_doctor_users'))
 
             except Exception as e:
-                print(f"Add normal user error: {e}")
-                flash('Error creating user.', 'error')
+                print(f"Add doctor user error: {e}")
+                flash('Error creating doctor user. Please try again.', 'error')
 
     return render_template('admin/add_doctor_user.html')
-
 
 @app.route('/admin/doctor-users/<int:doctor_id>/verify', methods=['POST'])
 @admin_required
