@@ -426,7 +426,7 @@
 
                         <!-- Regular Actions -->
                         <div class="action-buttons">
-                            <a href="{{ url_for('admin_edit_doctor_user', user_id=user.id) }}" class="btn btn-sm btn-info">✏️ Edit</a>
+                            <a href="{{ url_for('admin_edit_doctor_user', doctor_id=doctor.id) }}" class="btn btn-sm btn-info">✏️ Edit</a>
 
                             {% if doctor.banned_until and doctor.banned_until > datetime.now() %}
                                 <form method="POST" action="#" style="display:inline;">

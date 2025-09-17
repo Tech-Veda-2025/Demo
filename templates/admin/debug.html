@@ -1,0 +1,27 @@
+<!-- templates/admin/doctor_users_debug.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="admin-container">
+    <h1>🔍 Debug Doctor Users Variables</h1>
+    
+    <h3>Available Variables:</h3>
+    <ul>
+        <li>doctors: {{ 'YES' if doctors is defined else 'NO' }}</li>
+        <li>users: {{ 'YES' if users is defined else 'NO' }}</li>
+        <li>doctor_users: {{ 'YES' if doctor_users is defined else 'NO' }}</li>
+    </ul>
+    
+    {% if doctors is defined and doctors %}
+        <h3>✅ Found 'doctors' variable</h3>
+        <p>Count: {{ doctors|length }}</p>
+        <p>First doctor: {{ doctors[0].name if doctors[0].name else 'No name' }}</p>
+    {% endif %}
+    
+    {% if users is defined and users %}
+        <h3>✅ Found 'users' variable</h3>
+        <p>Count: {{ users|length }}</p>
+        <p>First user: {{ users[0].name if users[0].name else 'No name' }}</p>
+    {% endif %}
+</div>
+{% endblock %}

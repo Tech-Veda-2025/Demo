@@ -1875,63 +1875,6 @@ def admin_edit_normal_user(user_id):
         print(f"Edit normal user error: {e}")
         flash('Error updating user.', 'error')
         return redirect(url_for('admin_normal_users'))
-        
-@app.route('/admin/doctor-users/<int:user_id>/edit', methods=['GET', 'POST'])
-@admin_required
-def admin_edit_doctor_user(user_id):
-    """Edit doctor user"""
-    connection = get_db_connection()
-    if not connection:
-        flash('Database connection error.', 'error')
-        return redirect(url_for('admin_doctor_users'))
-
-    try:
-        cursor = connection.cursor(dictionary=True)
-
-        # Get user data
-        cursor.execute("""
-            SELECT * FROM doctor_users WHERE id = %s
-        """, (user_id,))
-
-        user = cursor.fetchone()
-        if not user:
-            flash('User not found.', 'error')
-            return redirect(url_for('admin_doctor_users'))
-
-        if request.method == 'POST':
-            # username = request.form.get('username', '').strip()
-            email = request.form.get('email', '').strip() 
-            name = request.form.get('name', '').strip()
-            is_active = request.form.get('is_active') == 'on'
-
-            # Update user
-            cursor.execute("""
-                UPDATE doctor_users 
-                SET email = %s, name = %s, is_active = %s
-                WHERE id = %s
-            """, (email, name, is_active, user_id))
-
-            connection.commit()
-
-            # Log activity
-            log_admin_activity(session['admin_id'], 'EDIT_USER', 'normal', user_id,
-                             {'name': name, 'email': email, 'is_active': is_active})
-
-            cursor.close()
-            connection.close()
-
-            flash('User updated successfully!', 'success')
-            return redirect(url_for('admin_doctor_users'))
-
-        cursor.close()
-        connection.close()
-
-        return render_template('admin/edit_doctor_user.html', user=user)
-
-    except Exception as e:
-        print(f"Edit normal user error: {e}")
-        flash('Error updating user.', 'error')
-        return redirect(url_for('admin_doctor_users'))
 
 @app.route('/admin/normal-users/<int:user_id>/ban', methods=['POST'])
 @admin_required
@@ -2205,6 +2148,81 @@ def admin_add_doctor_user():
                 flash('Error creating doctor user. Please try again.', 'error')
 
     return render_template('admin/add_doctor_user.html')
+
+@app.route('/admin/doctor-users/<int:doctor_id>/edit', methods=['GET', 'POST'])
+@admin_required
+def admin_edit_doctor_user(doctor_id):
+    """Edit doctor user"""
+    connection = get_db_connection()
+    if not connection:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('admin_doctor_users'))
+
+    try:
+        cursor = connection.cursor(dictionary=True)
+
+        # Get doctor user data
+        cursor.execute("""
+            SELECT * FROM doctor_users WHERE id = %s
+        """, (doctor_id,))
+
+        user = cursor.fetchone()
+        if not user:
+            flash('Doctor not found.', 'error')
+            return redirect(url_for('admin_doctor_users'))
+
+        if request.method == 'POST':
+            email = request.form.get('email', '').strip()
+            name = request.form.get('name', '').strip()
+            qualification = request.form.get('qualification', '').strip()
+            is_active = request.form.get('is_active') == 'on'
+            verification_status = request.form.get('verification_status', 'pending')
+
+
+            # Update doctor user
+            cursor.execute("""
+                UPDATE doctor_users 
+                SET 
+                    email = %s, 
+                    name = %s, 
+                    qualification = %s,
+                    is_active = %s,
+                    verification_status = %s,
+                    verified_at = %s
+                WHERE id = %s
+            """, (
+                email, name, qualification,
+                is_active, verification_status,
+                datetime.now() if verification_status == 'verified' and user['verification_status'] != 'verified' else user.get('verified_at'),
+                doctor_id
+            ))
+
+            connection.commit()
+
+            # Log admin activity
+            log_admin_activity(session['admin_id'], 'EDIT_DOCTOR', 'doctor', doctor_id,
+                             {
+                                 'name': name, 
+                                 'email': email, 
+                                 'is_active': is_active,
+                                 'verification_status': verification_status
+                             })
+
+            cursor.close()
+            connection.close()
+
+            flash('Doctor updated successfully!', 'success')
+            return redirect(url_for('admin_doctor_users'))
+
+        cursor.close()
+        connection.close()
+
+        return render_template('admin/edit_doctor_user.html', user=user)
+
+    except Exception as e:
+        print(f"Edit doctor user error: {e}")
+        flash('Error updating doctor.', 'error')
+        return redirect(url_for('admin_doctor_users'))
 
 @app.route('/admin/doctor-users/<int:doctor_id>/verify', methods=['POST'])
 @admin_required
@@ -2720,6 +2738,18 @@ def debug_photos():
         """
     
     return result
+
+@app.route('/admin/doctor-users-debug')
+@admin_required
+def admin_doctor_users_debug():
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM doctor_users LIMIT 3")
+    doctors = cursor.fetchall()
+    cursor.close()
+    connection.close()
+    
+    return render_template('admin/debug.html', doctors=doctors)
 
 
 if __name__ == '__main__':
