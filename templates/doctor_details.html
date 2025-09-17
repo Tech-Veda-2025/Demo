@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+
+{% block title %}Dr. {{ doctor.full_name or doctor.doctor_name }} - Doctor Details{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --primary-color: #4CAF50;
+    --secondary-color: #45a049;
+    --accent-color: #FF9800;
+    --text-primary: #2c3e50;
+    --text-secondary: #7f8c8d;
+    --background-color: #f8f9fa;
+    --white: #ffffff;
+    --border-color: #e0e0e0;
+    --border-radius: 12px;
+    --shadow: 0 4px 15px rgba(0,0,0,0.1);
+    --transition: all 0.3s ease;
+}
+
+.doctor-details-container {
+    max-width: 1000px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--primary-color);
+    text-decoration: none;
+    margin-bottom: 2rem;
+    font-weight: 500;
+}
+
+.back-link:hover {
+    color: var(--secondary-color);
+}
+
+.doctor-profile-card {
+    background: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.profile-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: var(--white);
+    padding: 3rem 2rem;
+    text-align: center;
+    position: relative;
+}
+
+.profile-photo {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 5px solid var(--white);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    margin-bottom: 1.5rem;
+}
+
+.profile-avatar {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    font-weight: bold;
+    border: 5px solid var(--white);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    margin: 0 auto 1.5rem;
+}
+
+.doctor-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.doctor-specialty-large {
+    font-size: 1.3rem;
+    opacity: 0.9;
+    margin-bottom: 1rem;
+}
+
+.verification-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255,255,255,0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 25px;
+    font-weight: 500;
+}
+
+.profile-content {
+    padding: 2rem;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.info-section {
+    background: var(--background-color);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+}
+
+.section-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.info-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.info-item:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.info-value {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.bio-section {
+    background: var(--white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 2rem;
+}
+
+.bio-text {
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+.btn {
+    padding: 1rem 2rem;
+    border-radius: var(--border-radius);
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: var(--white);
+}
+
+.btn-primary:hover {
+    background: var(--secondary-color);
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+}
+
+.btn-secondary:hover {
+    background: var(--primary-color);
+    color: var(--white);
+}
+
+@media (max-width: 768px) {
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .doctor-title {
+        font-size: 2rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="doctor-details-container">
+    <a href="{{ url_for('find_doctor') }}" class="back-link">
+        ← Back to Find Doctor
+    </a>
+
+    <div class="doctor-profile-card">
+        <div class="profile-header">
+            {% if doctor.profile_photo or doctor.profile_image %}
+                <img src="{{ doctor.profile_photo or doctor.profile_image }}" alt="Dr. {{ doctor.full_name or doctor.doctor_name }}" class="profile-photo">
+            {% else %}
+                <div class="profile-avatar">
+                    {% set name = doctor.full_name or doctor.doctor_name %}
+                    {% if name.startswith('') %}
+                        {% set name = name[4:] %}
+                    {% endif %}
+                    {{ name.split() if name.split() else 'D' }}{{ name.split() if name.split()|length > 1 else '' }}
+                </div>
+            {% endif %}
+
+            <h1 class="doctor-title">{{ doctor.full_name or doctor.doctor_name }}</h1>
+            <div class="doctor-specialty-large">{{ doctor.specialty or 'Ayurveda Specialist' }}</div>
+            <div class="verification-status">
+                ✓ Verified Doctor
+            </div>
+        </div>
+
+        <div class="profile-content">
+            <div class="info-grid">
+                <div class="info-section">
+                    <h3 class="section-title">
+                        📋 Professional Information
+                    </h3>
+                    <ul class="info-list">
+                        <li class="info-item">
+                            <span class="info-label">Qualification:</span>
+                            <span class="info-value">{{ doctor.qualification or 'BAMS' }}</span>
+                        </li>
+                        <li class="info-item">
+                            <span class="info-label">Experience:</span>
+                            <span class="info-value">{{ doctor.experience_years or doctor.experience or 0 }} years</span>
+                        </li>
+                        <li class="info-item">
+                            <span class="info-label">Consultation Fee:</span>
+                            <span class="info-value">
+                                {% if doctor.consultation_fee or doctor.consultant_fee %}
+                                    ₹{{ (doctor.consultation_fee or doctor.consultant_fee)|round|int }}
+                                {% else %}
+                                    Contact for fees
+                                {% endif %}
+                            </span>
+                        </li>
+                        <li class="info-item">
+                            <span class="info-label">Clinic:</span>
+                            <span class="info-value">{{ doctor.clinic_name or 'Private Practice' }}</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="info-section">
+                    <h3 class="section-title">
+                        📍 Contact & Location
+                    </h3>
+                    <ul class="info-list">
+                        <li class="info-item">
+                            <span class="info-label">Email:</span>
+                            <span class="info-value">{{ doctor.email }}</span>
+                        </li>
+                        {% if doctor.mobile_number %}
+                        <li class="info-item">
+                            <span class="info-label">Phone:</span>
+                            <span class="info-value">{{ doctor.mobile_number }}</span>
+                        </li>
+                        {% endif %}
+                        <li class="info-item">
+                            <span class="info-label">City:</span>
+                            <span class="info-value">{{ doctor.city or 'Not specified' }}</span>
+                        </li>
+                        <li class="info-item">
+                            <span class="info-label">State:</span>
+                            <span class="info-value">{{ doctor.state or 'Not specified' }}</span>
+                        </li>
+                        {% if doctor.pincode %}
+                        <li class="info-item">
+                            <span class="info-label">Pincode:</span>
+                            <span class="info-value">{{ doctor.pincode }}</span>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if doctor.bio %}
+    <div class="bio-section">
+        <h3 class="section-title">
+            👨‍⚕️ About {{ doctor.full_name or doctor.doctor_name }}
+        </h3>
+        <p class="bio-text">{{ doctor.bio }}</p>
+    </div>
+    {% endif %}
+
+    <div class="action-buttons">
+        <a href="{{ url_for('book_appointment', doctor_id=doctor.id) }}" class="btn btn-primary">
+            📅 Book Appointment
+        </a>
+        <a href="{{ url_for('find_doctor') }}" class="btn btn-secondary">
+            🔍 Find More Doctors
+        </a>
+    </div>
+</div>
+{% endblock %}

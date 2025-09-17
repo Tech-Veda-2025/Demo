@@ -1875,6 +1875,63 @@ def admin_edit_normal_user(user_id):
         print(f"Edit normal user error: {e}")
         flash('Error updating user.', 'error')
         return redirect(url_for('admin_normal_users'))
+        
+@app.route('/admin/doctor-users/<int:user_id>/edit', methods=['GET', 'POST'])
+@admin_required
+def admin_edit_doctor_user(user_id):
+    """Edit doctor user"""
+    connection = get_db_connection()
+    if not connection:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('admin_doctor_users'))
+
+    try:
+        cursor = connection.cursor(dictionary=True)
+
+        # Get user data
+        cursor.execute("""
+            SELECT * FROM doctor_users WHERE id = %s
+        """, (user_id,))
+
+        user = cursor.fetchone()
+        if not user:
+            flash('User not found.', 'error')
+            return redirect(url_for('admin_doctor_users'))
+
+        if request.method == 'POST':
+            # username = request.form.get('username', '').strip()
+            email = request.form.get('email', '').strip() 
+            name = request.form.get('name', '').strip()
+            is_active = request.form.get('is_active') == 'on'
+
+            # Update user
+            cursor.execute("""
+                UPDATE doctor_users 
+                SET email = %s, name = %s, is_active = %s
+                WHERE id = %s
+            """, (email, name, is_active, user_id))
+
+            connection.commit()
+
+            # Log activity
+            log_admin_activity(session['admin_id'], 'EDIT_USER', 'normal', user_id,
+                             {'name': name, 'email': email, 'is_active': is_active})
+
+            cursor.close()
+            connection.close()
+
+            flash('User updated successfully!', 'success')
+            return redirect(url_for('admin_doctor_users'))
+
+        cursor.close()
+        connection.close()
+
+        return render_template('admin/edit_doctor_user.html', user=user)
+
+    except Exception as e:
+        print(f"Edit normal user error: {e}")
+        flash('Error updating user.', 'error')
+        return redirect(url_for('admin_doctor_users'))
 
 @app.route('/admin/normal-users/<int:user_id>/ban', methods=['POST'])
 @admin_required
@@ -2227,6 +2284,442 @@ def log_admin_activity(admin_id, action, target_user_type, target_user_id, detai
     except Exception as e:
         print(f"Activity logging error: {e}")
 
+from flask import send_from_directory
+import os
+
+# Add after your Flask app creation
+@app.route('/uploads/<path:filename>')
+def uploaded_file(filename):
+    """Serve uploaded files from uploads folder and subdirectories"""
+    try:
+        return send_from_directory('uploads', filename)
+    except FileNotFoundError:
+        from flask import abort
+        abort(404)
+
+# Ensure your directory exists
+os.makedirs('uploads/doctor_profiles/profile_photos', exist_ok=True)
+
+@app.route('/find_doctor', methods=['GET', 'POST'])
+@login_required
+def find_doctor():
+    """Find Ayurvedic doctors - Show ALL doctors by default, filter on search"""
+    if session.get('user_type') != 'normal':
+        flash('Access denied. This feature is only for normal users.', 'error')
+        return redirect(url_for('index'))
+
+    location = ''
+    pincode = ''
+    search_performed = False
+
+    if request.method == 'POST':
+        location = request.form.get('location', '').strip()
+        pincode = request.form.get('pincode', '').strip()
+        search_performed = True
+
+        # Validate pincode format if provided
+        if pincode and (not pincode.isdigit() or len(pincode) != 6):
+            flash('Please enter a valid 6-digit pincode.', 'error')
+            # Still get all doctors even with validation error
+            doctors = get_all_registered_doctors()
+            return render_template('find_doctor.html', 
+                                 doctors=doctors, 
+                                 location=location, 
+                                 pincode=pincode,
+                                 search_performed=False)
+
+        # Search for doctors if search criteria provided
+        if location or pincode:
+            doctors = search_registered_doctors(location, pincode)
+
+            if not doctors:
+                flash(f'No doctors found for your search criteria. Showing all available doctors.', 'info')
+                doctors = get_all_registered_doctors()
+        else:
+            # No search criteria provided, show all doctors
+            doctors = get_all_registered_doctors()
+    else:
+        # GET request - show all doctors by default
+        doctors = get_all_registered_doctors()
+
+    return render_template('find_doctor.html', 
+                         doctors=doctors, 
+                         location=location, 
+                         pincode=pincode,
+                         search_performed=search_performed)
+
+def get_all_registered_doctors():
+    """Get ALL registered verified doctors for default display"""
+    connection = get_db_connection()
+    if not connection:
+        return []
+
+    try:
+        cursor = connection.cursor(dictionary=True)
+
+        # Get all verified active doctors
+        cursor.execute("""
+            SELECT DISTINCT
+                du.id,
+                du.name as doctor_name,
+                du.email,
+                du.specialty,
+                du.qualification,
+                du.experience_years,
+                du.consultation_fee,
+                du.clinic_name,
+                du.clinic_address,
+                du.bio,
+                du.available_days,
+                du.available_hours,
+                du.profile_image,
+                dp.city,
+                dp.state,
+                dp.country,
+                dp.pincode,
+                dp.address as home_address,
+                dp.mobile_number,
+                dp.profile_photo,
+                dp.full_name,
+                dp.consultant_fee,
+                dp.experience as profile_experience,
+                dp.specialty as profile_specialty
+            FROM doctor_users du
+            LEFT JOIN doctor_user_profiles dp ON du.id = dp.user_id
+            WHERE du.verification_status = 'verified' 
+            AND du.is_active = TRUE
+            ORDER BY 
+                CASE 
+                    WHEN du.experience_years IS NOT NULL THEN du.experience_years
+                    WHEN dp.experience IS NOT NULL THEN dp.experience
+                    ELSE 0
+                END DESC,
+                du.name ASC
+            LIMIT 50
+        """)
+
+        doctors = cursor.fetchall()
+
+        # Process doctor data for display
+        processed_doctors = []
+        for doctor in doctors:
+            processed_doctor = process_doctor_data(doctor)
+            processed_doctors.append(processed_doctor)
+
+        cursor.close()
+        connection.close()
+
+        return processed_doctors
+
+    except Exception as e:
+        print(f"Get all doctors error: {e}")
+        return []
+
+def search_registered_doctors(location, pincode):
+    """Search for registered verified doctors by location/pincode"""
+    connection = get_db_connection()
+    if not connection:
+        return []
+
+    try:
+        cursor = connection.cursor(dictionary=True)
+
+        # Build search query for verified doctors
+        where_clauses = ["du.verification_status = 'verified'", "du.is_active = TRUE"]
+        params = []
+
+        # Add location search - search in multiple fields
+        if location:
+            where_clauses.append("""
+                (du.address LIKE %s OR 
+                 dp.city LIKE %s OR 
+                 dp.state LIKE %s OR
+                 du.clinic_address LIKE %s OR
+                 du.clinic_name LIKE %s OR
+                 dp.address LIKE %s)
+            """)
+            location_param = f"%{location}%"
+            params.extend([location_param] * 6)
+
+        # Add pincode search
+        if pincode:
+            where_clauses.append("dp.pincode = %s")
+            params.append(pincode)
+
+        where_sql = " AND ".join(where_clauses)
+
+        # Enhanced query with all doctor details
+        cursor.execute(f"""
+            SELECT DISTINCT
+                du.id,
+                du.name as doctor_name,
+                du.email,
+                du.specialty,
+                du.qualification,
+                du.experience_years,
+                du.consultation_fee,
+                du.clinic_name,
+                du.clinic_address,
+                du.bio,
+                du.available_days,
+                du.available_hours,
+                du.profile_image,
+                dp.city,
+                dp.state,
+                dp.country,
+                dp.pincode,
+                dp.address as home_address,
+                dp.mobile_number,
+                dp.profile_photo,
+                dp.full_name,
+                dp.consultant_fee,
+                dp.experience as profile_experience,
+                dp.specialty as profile_specialty
+            FROM doctor_users du
+            LEFT JOIN doctor_user_profiles dp ON du.id = dp.user_id
+            WHERE {where_sql}
+            ORDER BY 
+                CASE 
+                    WHEN du.experience_years IS NOT NULL THEN du.experience_years
+                    WHEN dp.experience IS NOT NULL THEN dp.experience
+                    ELSE 0
+                END DESC,
+                du.consultation_fee ASC,
+                du.name ASC
+            LIMIT 50
+        """, params)
+
+        doctors = cursor.fetchall()
+
+        # Process doctor data
+        processed_doctors = []
+        for doctor in doctors:
+            processed_doctor = process_doctor_data(doctor)
+            processed_doctors.append(processed_doctor)
+
+        cursor.close()
+        connection.close()
+
+        return processed_doctors
+
+    except Exception as e:
+        print(f"Search doctors error: {e}")
+        return []
+
+def process_doctor_data(doctor):
+    """Process raw doctor data for display - FIXED DOUBLE PREFIX"""
+    # Determine best name
+    doctor['display_name'] = doctor['full_name'] or doctor['doctor_name'] or 'Unknown'
+
+    # CORRECTED: Photo path processing
+    profile_photo = doctor['profile_photo'] or doctor['profile_image']
+    
+    if profile_photo:
+        # Simple logic to avoid double /uploads/ prefix
+        if profile_photo.startswith('uploads/'):
+            doctor['display_photo'] = f"/{profile_photo}"  # Just add leading slash
+        elif profile_photo.startswith('/uploads/'):
+            doctor['display_photo'] = profile_photo  # Already has full path
+        else:
+            doctor['display_photo'] = f"/uploads/{profile_photo}"  # Add full prefix
+    else:
+        doctor['display_photo'] = None
+
+    # Format consultation fee
+    consultation_fee = doctor['consultation_fee'] or doctor['consultant_fee']
+    if consultation_fee and consultation_fee > 0:
+        doctor['formatted_fee'] = f"₹{consultation_fee:.0f}"
+    else:
+        doctor['formatted_fee'] = "Contact for fees"
+
+    # Format experience
+    experience = doctor['experience_years'] or doctor['profile_experience']
+    if experience and experience > 0:
+        doctor['formatted_experience'] = f"{experience} years"
+    else:
+        doctor['formatted_experience'] = "New practitioner"
+
+    # Format specialty
+    specialty = doctor['specialty'] or doctor['profile_specialty']
+    doctor['formatted_specialty'] = specialty or 'Ayurveda'
+
+    # CORRECTED: Initials generation
+    name = doctor['display_name']
+    if name.startswith('Dr. '):
+        name = name[4:]
+    name_parts = name.split()
+    if len(name_parts) >= 2:
+        doctor['initials'] = f"{name_parts[0][0]}{name_parts[1][0]}".upper()
+    elif len(name_parts) == 1:
+        doctor['initials'] = f"{name_parts[0][0]}D".upper()
+    else:
+        doctor['initials'] = "DR"
+
+    # Format clinic info
+    doctor['clinic_info'] = doctor['clinic_name'] or 'Private Practice'
+
+    # Format location
+    if doctor['city'] and doctor['state']:
+        doctor['location_display'] = f"{doctor['city']}, {doctor['state']}"
+    elif doctor['city']:
+        doctor['location_display'] = doctor['city']
+    else:
+        doctor['location_display'] = "Location not specified"
+
+    # Format availability
+    if doctor['available_days']:
+        try:
+            import json
+            days = json.loads(doctor['available_days'])
+            if isinstance(days, list) and days:
+                doctor['availability'] = ', '.join(days[:3])
+            else:
+                doctor['availability'] = 'Contact for availability'
+        except:
+            doctor['availability'] = 'Contact for availability'
+    else:
+        doctor['availability'] = 'Contact for availability'
+
+    return doctor
+
+@app.route('/api/doctor-location/<int:doctor_id>')
+@login_required
+def api_doctor_location(doctor_id):
+    """API to get doctor location for maps"""
+    if session.get('user_type') != 'normal':
+        return jsonify({'error': 'Access denied'}), 403
+
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'error': 'Database error'}), 500
+
+    try:
+        cursor = connection.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT 
+                du.name as doctor_name,
+                du.clinic_name,
+                du.clinic_address,
+                du.consultation_fee,
+                dp.city,
+                dp.state,
+                dp.pincode,
+                dp.address
+            FROM doctor_users du
+            LEFT JOIN doctor_user_profiles dp ON du.id = dp.user_id
+            WHERE du.id = %s AND du.verification_status = 'verified'
+        """, (doctor_id,))
+
+        doctor = cursor.fetchone()
+        cursor.close()
+        connection.close()
+
+        if doctor:
+            return jsonify({
+                'name': doctor['doctor_name'],
+                'clinic': doctor['clinic_name'],
+                'address': doctor['clinic_address'] or doctor['address'],
+                'city': doctor['city'],
+                'state': doctor['state'],
+                'pincode': doctor['pincode'],
+                'fee': doctor['consultation_fee']
+            })
+        else:
+            return jsonify({'error': 'Doctor not found'}), 404
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Keep existing doctor_details and book_appointment routes unchanged
+@app.route('/doctor-details/<int:doctor_id>')
+@login_required
+def doctor_details(doctor_id):
+    """View detailed doctor profile"""
+    if session.get('user_type') != 'normal':
+        flash('Access denied.', 'error')
+        return redirect(url_for('index'))
+
+    connection = get_db_connection()
+    if not connection:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('find_doctor'))
+
+    try:
+        cursor = connection.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT 
+                du.*,
+                dp.*,
+                du.name as doctor_name,
+                dp.full_name as profile_name
+            FROM doctor_users du
+            LEFT JOIN doctor_user_profiles dp ON du.id = dp.user_id
+            WHERE du.id = %s AND du.verification_status = 'verified'
+        """, (doctor_id,))
+
+        doctor = cursor.fetchone()
+        cursor.close()
+        connection.close()
+
+        if not doctor:
+            flash('Doctor not found.', 'error')
+            return redirect(url_for('find_doctor'))
+
+        return render_template('doctor_details.html', doctor=doctor)
+
+    except Exception as e:
+        print(f"Doctor details error: {e}")
+        flash('Error loading doctor details.', 'error')
+        return redirect(url_for('find_doctor'))
+
+@app.route('/book-appointment/<int:doctor_id>')
+@login_required
+def book_appointment(doctor_id):
+    """Book appointment with doctor"""
+    if session.get('user_type') != 'normal':
+        flash('Access denied.', 'error')
+        return redirect(url_for('index'))
+
+    # For now, redirect to a placeholder or implement booking logic
+    flash(f'Appointment booking with doctor ID {doctor_id} - Feature coming soon!', 'info')
+    return redirect(url_for('find_doctor'))
+
+@app.route('/debug-photos')
+def debug_photos():
+    """Debug doctor photos in database"""
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    
+    cursor.execute("""
+        SELECT 
+            du.id, du.name, du.profile_image,
+            dp.profile_photo
+        FROM doctor_users du
+        LEFT JOIN doctor_user_profiles dp ON du.id = dp.user_id
+        WHERE du.verification_status = 'verified'
+        LIMIT 5
+    """)
+    
+    doctors = cursor.fetchall()
+    cursor.close()
+    connection.close()
+    
+    result = "<h2>Doctor Photos in Database:</h2>"
+    for doc in doctors:
+        photo = doc['profile_image'] or doc['profile_photo']
+        expected_url = f"/uploads/doctor_profiles/profile_photos/{photo}" if photo and '/' not in photo else f"/uploads/{photo}" if photo else "No photo"
+        
+        result += f"""
+        <p><strong>ID:</strong> {doc['id']}</p>
+        <p><strong>Name:</strong> {doc['name']}</p>
+        <p><strong>DB Photo Path:</strong> {photo or 'None'}</p>
+        <p><strong>Expected URL:</strong> {expected_url}</p>
+        <hr>
+        """
+    
+    return result
 
 
 if __name__ == '__main__':

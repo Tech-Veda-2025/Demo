@@ -1,0 +1,579 @@
+{% extends "base.html" %}
+
+{% block title %}Find Ayurvedic Doctors - Healthcare Portal{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --primary-color: #4CAF50;
+    --secondary-color: #45a049;
+    --accent-color: #FF9800;
+    --text-primary: #2c3e50;
+    --text-secondary: #7f8c8d;
+    --background-color: #f8f9fa;
+    --white: #ffffff;
+    --border-color: #e0e0e0;
+    --border-radius: 12px;
+    --shadow: 0 4px 15px rgba(0,0,0,0.1);
+    --hover-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    --transition: all 0.3s ease;
+}
+
+.find-doctor-container {
+    max-width: 1400px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.page-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: var(--white);
+    padding: 3rem 2rem;
+    border-radius: var(--border-radius);
+    text-align: center;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.page-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="80" r="2" fill="rgba(255,255,255,0.1)"/></svg>');
+}
+
+.page-title {
+    font-size: 2.8rem;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+    position: relative;
+}
+
+.page-subtitle {
+    font-size: 1.3rem;
+    opacity: 0.9;
+    margin: 0;
+    position: relative;
+}
+
+.search-section {
+    background: var(--white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 2rem;
+}
+
+.search-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 1.5rem;
+    align-items: end;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-label {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-control {
+    padding: 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    transition: var(--transition);
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.search-btn {
+    background: var(--primary-color);
+    color: var(--white);
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+}
+
+.search-btn:hover {
+    background: var(--secondary-color);
+    transform: translateY(-2px);
+    box-shadow: var(--hover-shadow);
+}
+
+.results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    background: var(--white);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+}
+
+.results-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.results-count {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.doctors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.doctor-card {
+    background: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: var(--transition);
+    position: relative;
+}
+
+.doctor-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--hover-shadow);
+}
+
+.doctor-card-header {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    padding: 2rem 1.5rem 1rem;
+    text-align: center;
+    position: relative;
+}
+
+.doctor-photo-container {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 1rem;
+}
+
+.doctor-photo {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid var(--white);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.doctor-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: bold;
+    border: 4px solid var(--white);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.verification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: var(--primary-color);
+    color: var(--white);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    border: 3px solid var(--white);
+}
+
+.doctor-name {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+}
+
+.doctor-specialty {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.doctor-clinic {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.doctor-card-body {
+    padding: 1.5rem;
+}
+
+.doctor-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 1rem;
+    background: var(--background-color);
+    border-radius: var(--border-radius);
+}
+
+.stat-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 0.25rem;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.doctor-info {
+    margin-bottom: 1.5rem;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.info-icon {
+    color: var(--primary-color);
+    font-size: 1rem;
+    width: 16px;
+    text-align: center;
+}
+
+.doctor-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.btn {
+    padding: 0.875rem 1.5rem;
+    border-radius: var(--border-radius);
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: var(--white);
+}
+
+.btn-primary:hover {
+    background: var(--secondary-color);
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+}
+
+.btn-secondary:hover {
+    background: var(--primary-color);
+    color: var(--white);
+}
+
+.no-doctors {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-secondary);
+    background: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+}
+
+.no-doctors-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    color: var(--accent-color);
+}
+
+.back-button {
+            position: fixed;
+            top: 100px;
+            left: 20px;
+            background: var(--white);
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            z-index: 1000;
+            box-shadow: var(--shadow);
+        }
+
+        .back-button:hover {
+            background: var(--primary-color);
+            color: var(--white);
+            transform: scale(1.1);
+        }
+
+.clear-search {
+    background: transparent;
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: var(--transition);
+    margin-top: 1rem;
+    display: inline-block;
+}
+
+.clear-search:hover {
+    background: var(--primary-color);
+    color: var(--white);
+}
+
+@media (max-width: 768px) {
+    .search-form {
+        grid-template-columns: 1fr;
+    }
+
+    .doctors-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .doctor-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .doctor-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .results-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+    <a href="javascript:history.back()" class="back-button" title="Go Back">
+        ←
+    </a>
+
+<div class="find-doctor-container">
+    <div class="page-header">
+        <h1 class="page-title">🌿 Find Ayurvedic Doctors</h1>
+        <p class="page-subtitle">Discover verified Ayurvedic practitioners near your location</p>
+    </div>
+
+    <!-- SEARCH SECTION - ALWAYS VISIBLE -->
+    <div class="search-section">
+        <form method="POST" class="search-form">
+            <div class="form-group">
+                <label for="location" class="form-label">
+                    📍 Location (City/Area)
+                </label>
+                <input type="text" id="location" name="location" class="form-control" 
+                       value="{{ location }}" placeholder="Enter city or area name">
+            </div>
+
+            <div class="form-group">
+                <label for="pincode" class="form-label">
+                    📮 Pincode
+                </label>
+                <input type="text" id="pincode" name="pincode" class="form-control" 
+                       value="{{ pincode }}" placeholder="Enter 6-digit pincode" maxlength="6" pattern="[0-9]{6}">
+            </div>
+
+            <button type="submit" class="search-btn">
+                🔍 Search Doctors
+            </button>
+        </form>
+    </div>
+
+    <!-- RESULTS SECTION - SHOWS ALL DOCTORS BY DEFAULT -->
+    {% if doctors %}
+    <div class="results-header">
+        <h2 class="results-title">
+            {% if search_performed and (location or pincode) %}
+                🎯 Search Results
+            {% else %}
+                👩‍⚕️ All Registered Doctors
+            {% endif %}
+        </h2>
+        <div class="results-count">
+            📊 {{ doctors|length }} verified doctor{{ 's' if doctors|length != 1 else '' }} available
+        </div>
+    </div>
+
+    <div class="doctors-grid">
+        {% for doctor in doctors %}
+        <div class="doctor-card">
+            <div class="doctor-card-header">
+                <!-- <div class="doctor-photo-container">
+                    {% if doctor.display_photo %}
+                        <img src="{{ doctor.display_photo }}" alt="{{ doctor.display_name }}" class="doctor-photo">
+                    {% else %}
+                        <div class="doctor-avatar">
+                            {{ doctor.initials }}
+                        </div>
+                    {% endif %}
+                    <div class="verification-badge" title="Verified Doctor">
+                        ✓
+                    </div>
+                </div> -->
+                <div class="doctor-photo-container">
+                    {% if doctor.display_photo %}
+                    <img src="{{ doctor.display_photo }}" 
+                    alt="{{ doctor.display_name }}" 
+                    class="doctor-photo"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="doctor-avatar" style="display: none;">
+                        {{ doctor.initials }}
+                    </div>
+                    {% else %}
+                    <div class="doctor-avatar">
+                        {{ doctor.initials }}
+                    </div>
+                    {% endif %}
+                    <div class="verification-badge" title="Verified Doctor">✓</div>
+                </div>
+
+                <h3 class="doctor-name">{{ doctor.display_name }}</h3>
+                <div class="doctor-specialty">{{ doctor.formatted_specialty }}</div>
+                <div class="doctor-clinic">{{ doctor.clinic_info }}</div>
+            </div>
+
+            <div class="doctor-card-body">
+                <div class="doctor-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">{{ doctor.formatted_experience }}</div>
+                        <div class="stat-label">Experience</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{{ doctor.formatted_fee }}</div>
+                        <div class="stat-label">Consultation</div>
+                    </div>
+                </div>
+
+                <div class="doctor-info">
+                    <div class="info-item">
+                        <span class="info-icon">🎓</span>
+                        <span>{{ doctor.qualification or 'BAMS' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-icon">📍</span>
+                        <span>{{ doctor.location_display }}</span>
+                    </div>
+                    {% if doctor.availability %}
+                    <div class="info-item">
+                        <span class="info-icon">🕒</span>
+                        <span>Available: {{ doctor.availability }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="doctor-actions">
+                    <a href="{{ url_for('book_appointment', doctor_id=doctor.id) }}" class="btn btn-primary">
+                        📅 Book Appointment
+                    </a>
+                    <a href="{{ url_for('doctor_details', doctor_id=doctor.id) }}" class="btn btn-secondary">
+                        👁️ View Details
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if search_performed and (location or pincode) %}
+    <!-- Show clear search option if a search was performed -->
+    <div style="text-align: center; margin: 2rem 0;">
+        <a href="{{ url_for('find_doctor') }}" class="clear-search">
+            🔄 Clear Search & Show All Doctors
+        </a>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- Only show this if truly no doctors exist -->
+    <div class="no-doctors">
+        <div class="no-doctors-icon">👩‍⚕️</div>
+        <h3>No Doctors Available</h3>
+        <p>There are currently no registered doctors in the system.</p>
+        <p>Please check back later or contact support.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
