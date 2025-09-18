@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+
+{% block title %}Doctor Verification - {{ doctor.name }} - Admin Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+.admin-container {
+    max-width: 1000px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.page-header {
+    background: var(--white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.doctor-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.info-card {
+    background: var(--white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+}
+
+.info-card h3 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.info-label {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.info-value {
+    color: var(--text-secondary);
+    text-align: right;
+}
+
+.document-section {
+    background: var(--white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 2rem;
+}
+
+.document-viewer {
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    margin: 1rem 0;
+}
+
+.document-preview {
+    width: 100%;
+    height: 500px;
+    border: none;
+}
+
+.verification-section {
+    background: #f8f9fa;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.form-control {
+    padding: 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+}
+
+.verification-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 1.5rem;
+}
+
+.btn {
+    padding: 1rem 2rem;
+    border-radius: var(--border-radius);
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.btn-secondary {
+    background: var(--background-color);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.status-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.status-verified {
+    background: #E8F5E8;
+    color: #28a745;
+}
+
+.status-pending {
+    background: #FFF3E0;
+    color: #F57C00;
+}
+
+.status-rejected {
+    background: #FFEBEE;
+    color: #C62828;
+}
+
+.no-document {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-secondary);
+    background: #f8f9fa;
+    border-radius: var(--border-radius);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="page-header">
+        <h1>🔍 Doctor Verification</h1>
+        <h2>{{ doctor.name or 'No Name' }}</h2>
+        <span class="status-badge {{ 'status-verified' if doctor.verification_status == 'verified' else 'status-pending' if doctor.verification_status == 'pending' else 'status-rejected' }}">
+            {% if doctor.verification_status == 'verified' %}
+                ✅ Verified
+            {% elif doctor.verification_status == 'pending' %}
+                ⏳ Pending Review
+            {% else %}
+                ❌ Rejected
+            {% endif %}
+        </span>
+    </div>
+
+    <!-- Doctor Information Grid -->
+    <div class="doctor-info-grid">
+        <!-- Basic Information -->
+        <div class="info-card">
+            <h3>👤 Personal Information</h3>
+            <div class="info-item">
+                <span class="info-label">Full Name:</span>
+                <span class="info-value">{{ doctor.name or 'Not provided' }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Email:</span>
+                <span class="info-value">{{ doctor.email }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Phone:</span>
+                <span class="info-value">{{ doctor.phone or 'Not provided' }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Registration Date:</span>
+                <span class="info-value">{{ doctor.created_at.strftime('%Y-%m-%d') if doctor.created_at else 'N/A' }}</span>
+            </div>
+        </div>
+
+        <!-- Professional Information -->
+        <div class="info-card">
+            <h3>🏥 Professional Details</h3>
+            <div class="info-item">
+                <span class="info-label">Qualification:</span>
+                <span class="info-value">{{ doctor.qualification or 'Not provided' }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Specialty:</span>
+                <span class="info-value">{{ doctor.specialty or 'Not provided' }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Experience:</span>
+                <span class="info-value">{{ doctor.experience_years or 0 }} years</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Clinic:</span>
+                <span class="info-value">{{ doctor.clinic_name or 'Not provided' }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Document Verification Section -->
+    <div class="document-section">
+        <h3>📄 Qualification Document Review</h3>
+        
+        {% if doctor.qualification_proof %}
+            <div class="document-viewer">
+                {% if doctor.qualification_proof.lower().endswith(('.jpg', '.jpeg', '.png', '.gif')) %}
+                    <!-- Image Preview -->
+                    <img src="/static/{{ doctor.qualification_proof }}" 
+                         alt="Qualification Document" 
+                         style="max-width: 100%; height: auto; display: block;">
+                {% elif doctor.qualification_proof.lower().endswith('.pdf') %}
+                    <!-- PDF Preview -->
+                    <iframe src="/static/{{ doctor.qualification_proof }}" 
+                            class="document-preview"
+                            type="application/pdf">
+                        <p>Your browser does not support PDFs. 
+                           <a href="/static/{{ doctor.qualification_proof }}" target="_blank">Download the PDF</a>
+                        </p>
+                    </iframe>
+                {% else %}
+                    <!-- Other Document Types -->
+                    <div style="padding: 2rem; text-align: center;">
+                        <p>📄 Document: {{ doctor.qualification_proof }}</p>
+                        <a href="/static/qualification_3_c05e9efd.pdf" 
+                           target="_blank" class="btn btn-primary">
+                            📥 Download Document
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div style="display: flex; gap: 1rem; margin: 1rem 0;">
+                <a href="/static/{{ doctor.qualification_proof }}" 
+                   target="_blank" class="btn btn-secondary">
+                    🔍 View Full Size
+                </a>
+                <a href="/static/{{ doctor.qualification_proof }}" 
+                   download class="btn btn-secondary">
+                    📥 Download Document
+                </a>
+            </div>
+        {% else %}
+            <div class="no-document">
+                <h4>📄 No Document Uploaded</h4>
+                <p>This doctor has not uploaded a qualification document yet.</p>
+                <p>Please request the doctor to upload their qualification certificate.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Verification Action Section -->
+    <div class="verification-section">
+        <h3>⚖️ Verification Decision</h3>
+        
+        <form method="POST">
+            <div class="form-group">
+                <label for="verification_status" class="form-label">Verification Decision</label>
+                <select id="verification_status" name="verification_status" class="form-control" required>
+                    <option value="">Select Decision...</option>
+                    <option value="verified" {{ 'selected' if doctor.verification_status == 'verified' }}>
+                        ✅ Approve - Verify Doctor
+                    </option>
+                    <option value="rejected" {{ 'selected' if doctor.verification_status == 'rejected' }}>
+                        ❌ Reject - Deny Verification
+                    </option>
+                    <option value="pending" {{ 'selected' if doctor.verification_status == 'pending' }}>
+                        ⏳ Keep Pending - Need More Info
+                    </option>
+                </select>
+            </div>
+
+            <div class="form-group" style="display: none;">
+                <label for="verification_reason" class="form-label">Reason (shown to doctor if rejected)</label>
+                <textarea id="verification_reason" name="verification_reason" class="form-control" 
+                          rows="3" placeholder="Explain reason for rejection...">{{ doctor.verification_reason or '' }}</textarea>
+            </div>
+
+            <div class="verification-actions">
+                <button type="submit" class="btn btn-success">
+                    ✅ Save Verification Decision
+                </button>
+                <a href="{{ url_for('admin_doctor_users') }}" class="btn btn-secondary">
+                    ← Back to Doctor List
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Show/hide reason field based on verification status
+document.getElementById('verification_status').addEventListener('change', function() {
+    const reasonField = document.getElementById('verification_reason');
+    const reasonGroup = reasonField.closest('.form-group');
+    
+    if (this.value === 'rejected') {
+        reasonGroup.style.display = 'block';
+        reasonField.required = true;
+    } else {
+        reasonGroup.style.display = 'none';
+        reasonField.required = false;
+    }
+});
+
+// Form submission confirmation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const status = document.getElementById('verification_status').value;
+    const statusText = status === 'verified' ? 'VERIFY' : status === 'rejected' ? 'REJECT' : 'KEEP PENDING';
+    
+    return confirm(`Are you sure you want to ${statusText} this doctor?`);
+});
+</script>
+{% endblock %}

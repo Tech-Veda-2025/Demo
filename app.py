@@ -2306,6 +2306,97 @@ from flask import send_from_directory
 import os
 
 # Add after your Flask app creation
+
+from datetime import datetime
+
+@app.route('/admin/doctor-users/<int:doctor_id>/view', methods=['GET', 'POST'])
+@admin_required
+def admin_view_doctor_user(doctor_id):
+    """View doctor details and handle verification"""
+    connection = get_db_connection()
+    if not connection:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('admin_doctor_users'))
+
+    try:
+        cursor = connection.cursor(dictionary=True)
+
+        # ✅ FIXED: Get doctor data first (avoids JOIN issues)
+        cursor.execute("SELECT * FROM doctor_users WHERE id = %s", (doctor_id,))
+        doctor = cursor.fetchone()
+        
+        if not doctor:
+            flash('Doctor not found.', 'error')
+            return redirect(url_for('admin_doctor_users'))
+
+        # ✅ FIXED: Get profile data separately
+        cursor.execute("SELECT * FROM doctor_user_profiles WHERE user_id = %s", (doctor_id,))
+        profile = cursor.fetchone()
+        
+        # ✅ Merge profile data into doctor dict
+        if profile:
+            doctor['qualification_proof'] = profile.get('qualification_proof')
+            doctor['profile_photo'] = profile.get('profile_photo')
+            doctor['city'] = profile.get('city')
+            doctor['state'] = profile.get('state')
+            doctor['mobile_number'] = profile.get('mobile_number')
+            doctor['home_address'] = profile.get('address')
+        else:
+            doctor['qualification_proof'] = None
+            doctor['profile_photo'] = None
+
+        if request.method == 'POST':
+            verification_status = request.form.get('verification_status', '').strip()
+            verification_reason = request.form.get('verification_reason', '').strip()
+
+            if not verification_status:
+                flash('Please select a verification decision.', 'error')
+                return redirect(url_for('admin_view_doctor_user', doctor_id=doctor_id))
+
+            # Update verification status
+            cursor.execute("""
+                UPDATE doctor_users 
+                SET 
+                    verification_status = %s,
+                    verification_reason = %s,
+                    verified_by = %s,
+                    verified_at = %s
+                WHERE id = %s
+            """, (
+                verification_status,
+                verification_reason if verification_status == 'rejected' else None,
+                session['admin_id'],
+                datetime.now() if verification_status == 'verified' else None,
+                doctor_id
+            ))
+
+            connection.commit()
+
+            # Log admin activity
+            log_admin_activity(
+                session['admin_id'], 
+                f'DOCTOR_VERIFICATION_{verification_status.upper()}', 
+                'doctor', 
+                doctor_id,
+                {
+                    'verification_status': verification_status,
+                    'reason': verification_reason
+                }
+            )
+
+            flash(f'Doctor verification status updated to {verification_status}!', 'success')
+            return redirect(url_for('admin_doctor_users'))
+
+        cursor.close()
+        connection.close()
+
+        return render_template('admin/view_doctor_user.html', doctor=doctor)
+
+    except Exception as e:
+        print(f"View doctor user error: {e}")
+        flash('Error loading doctor details.', 'error')
+        return redirect(url_for('admin_doctor_users'))
+
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
     """Serve uploaded files from uploads folder and subdirectories"""
@@ -2739,17 +2830,70 @@ def debug_photos():
     
     return result
 
-@app.route('/admin/doctor-users-debug')
-@admin_required
-def admin_doctor_users_debug():
+
+@app.route('/debug/find-file/<int:doctor_id>')
+def debug_find_file(doctor_id):
+    """Find where the document file actually exists"""
+    import os
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM doctor_users LIMIT 3")
-    doctors = cursor.fetchall()
-    cursor.close()
-    connection.close()
+    cursor.execute("SELECT qualification_proof FROM doctor_user_profiles WHERE id = %s", (doctor_id,))
+    result = cursor.fetchone()
     
-    return render_template('admin/debug.html', doctors=doctors)
+    if result and result['qualification_proof']:
+        doc_path = result['qualification_proof']
+        
+        output = f"<h2>🔍 File Search for Doctor {doctor_id}</h2>"
+        output += f"<p><strong>DB Path:</strong> {doc_path}</p>"
+        
+        # Search in various locations
+        search_locations = [
+            doc_path,  # Exactly as stored
+            doc_path.replace('uploads/', ''),  # Without uploads prefix
+            f"static/{doc_path}",  # In static folder
+        ]
+        
+        output += "<h3>File Search Results:</h3>"
+        found_at = None
+        
+        for location in search_locations:
+            full_path = os.path.join(os.getcwd(), location)
+            exists = os.path.exists(full_path)
+            
+            if exists:
+                size = os.path.getsize(full_path)
+                output += f"<p>✅ FOUND: {location} ({size} bytes)</p>"
+                if not found_at:
+                    found_at = location
+            else:
+                output += f"<p>❌ Not found: {location}</p>"
+        
+        if found_at:
+            # Determine correct URL
+            clean_path = found_at.replace('uploads/', '') if found_at.startswith('uploads/') else found_at
+            correct_url = f"/uploads/{clean_path}"
+            
+            output += f"<h3>✅ SOLUTION:</h3>"
+            output += f"<p><strong>File found at:</strong> {found_at}</p>"
+            output += f"<p><strong>Correct URL:</strong> <a href='{correct_url}' target='_blank'>{correct_url}</a></p>"
+        else:
+            output += "<h3>❌ FILE NOT FOUND ANYWHERE</h3>"
+            output += "<p>The file may not have been uploaded successfully.</p>"
+            
+            # Show what's in the expected directory
+            expected_dir = os.path.join(os.getcwd(), 'uploads', 'doctor_profiles', 'documents')
+            if os.path.exists(expected_dir):
+                try:
+                    files = os.listdir(expected_dir)
+                    output += f"<p><strong>Files in uploads/doctor_profiles/documents/:</strong> {files}</p>"
+                except:
+                    output += "<p>Cannot read directory contents</p>"
+            else:
+                output += "<p><strong>Directory uploads/doctor_profiles/documents/ does not exist</strong></p>"
+        
+        return output
+    
+    return f"<h2>❌ No document found for Doctor {doctor_id}</h2>"
 
 
 if __name__ == '__main__':

@@ -407,7 +407,20 @@
                     </td>
                     <td>
                         <!-- Verification Actions -->
-                        {% if doctor.verification_status == 'pending' %}
+                         <div class="verification-actions">
+                            <form method="POST" action="{{ url_for('admin_view_doctor_user', doctor_id=doctor.id) }}" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-success">
+                                    🔍 Review & Verify
+                                </button>
+                            </form>
+                        </div>
+                         <!-- <td class="actions">
+                            <a href="{{ url_for('admin_view_doctor_user', doctor_id=doctor.id) }}" 
+                                class="btn btn-sm btn-primary">
+                                🔍 Review & Verify
+                            </a>
+                        </td> -->
+                        <!-- {% if doctor.verification_status == 'pending' %}
                         <div class="verification-actions">
                             <form method="POST" action="{{ url_for('admin_verify_doctor', doctor_id=doctor.id) }}" style="display:inline;">
                                 <button type="submit" class="btn btn-sm btn-success" 
@@ -422,7 +435,7 @@
                                 </button>
                             </form>
                         </div>
-                        {% endif %}
+                        {% endif %} -->
 
                         <!-- Regular Actions -->
                         <div class="action-buttons">
