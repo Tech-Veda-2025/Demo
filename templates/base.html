@@ -265,7 +265,7 @@
             <!-- MY CART - Normal Users Only -->
             {% if session.user_type == 'normal' %}
             <li>
-                <a href="#cart" class="profile-option" onclick="viewCart()">
+                <a href="{{ url_for('view_cart') }}" class="profile-option" onclick="viewCart()">
                     <span class="option-icon">🛒</span>
                     <span class="option-text">My Cart</span>
                     <span class="cart-badge">3</span>

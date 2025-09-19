@@ -1,0 +1,586 @@
+{% extends "base.html" %}
+
+{% block title %}{{ medicine.name }} - Medicine Details{% endblock %}
+
+{% block extra_css %}
+<style>
+.medicine-details-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.breadcrumb {
+    margin-bottom: 2rem;
+    color: #636e72;
+}
+
+.breadcrumb a {
+    color: #667eea;
+    text-decoration: none;
+}
+
+.medicine-main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    margin-bottom: 3rem;
+}
+
+.medicine-image-section {
+    text-align: center;
+}
+
+.main-image {
+    width: 100%;
+    max-width: 400px;
+    height: 400px;
+    object-fit: cover;
+    border-radius: 15px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+    margin-bottom: 1rem;
+}
+
+.prescription-badge {
+    display: inline-block;
+    background: #e84393;
+    color: white;
+    padding: 8px 20px;
+    border-radius: 25px;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.medicine-info {
+    background: white;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.medicine-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #2d3436;
+    margin-bottom: 1rem;
+    line-height: 1.3;
+}
+
+.manufacturer {
+    color: #667eea;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.generic-name {
+    color: #636e72;
+    font-style: italic;
+    margin-bottom: 2rem;
+}
+
+.price-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 15px;
+    margin-bottom: 2rem;
+}
+
+.current-price {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.stock-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stock-status {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+.quantity-selector {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.quantity-label {
+    font-weight: 600;
+    color: #2d3436;
+}
+
+.quantity-controls {
+    display: flex;
+    align-items: center;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.qty-btn {
+    background: #f8f9fa;
+    border: none;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    font-weight: 600;
+    transition: background 0.3s ease;
+}
+
+.qty-btn:hover {
+    background: #e9ecef;
+}
+
+.qty-input {
+    border: none;
+    text-align: center;
+    width: 60px;
+    padding: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.btn {
+    flex: 1;
+    padding: 15px;
+    border: none;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    text-align: center;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,184,148,0.4);
+}
+
+.btn-outline {
+    background: transparent;
+    border: 2px solid #667eea;
+    color: #667eea;
+}
+
+.btn-outline:hover {
+    background: #667eea;
+    color: white;
+}
+
+.medicine-details-tabs {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    margin-bottom: 3rem;
+}
+
+.tab-buttons {
+    display: flex;
+    border-bottom: 1px solid #eee;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 1.5rem;
+    background: none;
+    border: none;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #636e72;
+}
+
+.tab-btn.active {
+    color: #667eea;
+    border-bottom: 3px solid #667eea;
+}
+
+.tab-content {
+    padding: 2rem;
+}
+
+.tab-pane {
+    display: none;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+.detail-section h4 {
+    color: #2d3436;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+}
+
+.detail-section p {
+    line-height: 1.8;
+    color: #636e72;
+    margin-bottom: 1rem;
+}
+
+.related-medicines {
+    margin-top: 3rem;
+}
+
+.related-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #2d3436;
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.related-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.related-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    overflow: hidden;
+    transition: transform 0.3s ease;
+    cursor: pointer;
+}
+
+.related-card:hover {
+    transform: translateY(-3px);
+}
+
+.related-image {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+}
+
+.related-info {
+    padding: 1rem;
+}
+
+.related-name {
+    font-weight: 600;
+    color: #2d3436;
+    margin-bottom: 0.5rem;
+}
+
+.related-price {
+    color: #00b894;
+    font-weight: 700;
+}
+
+@media (max-width: 768px) {
+    .medicine-main {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .tab-buttons {
+        flex-direction: column;
+    }
+
+    .related-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="medicine-details-container">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+        <a href="{{ url_for('buy_medicines') }}">← Back to Medicines</a>
+    </div>
+
+    <!-- Main Medicine Info -->
+    <div class="medicine-main">
+        <div class="medicine-image-section">
+            <img src="{{ medicine.medicine_image or '/static/images/default-medicine.jpg' }}" 
+                 alt="{{ medicine.name }}" class="main-image"
+                 onerror="this.src='/static/images/default-medicine.jpg'">
+
+            {% if medicine.prescription_required %}
+            <div class="prescription-badge">
+                🔒 Prescription Required
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="medicine-info">
+            <h1 class="medicine-title">{{ medicine.name }}</h1>
+            <div class="manufacturer">{{ medicine.manufacturer }}</div>
+            {% if medicine.generic_name %}
+            <div class="generic-name">Generic: {{ medicine.generic_name }}</div>
+            {% endif %}
+
+            <div class="price-section">
+                <div class="current-price">₹{{ "%.2f"|format(medicine.price) }}</div>
+                <div>Best price guaranteed</div>
+            </div>
+
+            <div class="stock-info">
+                <strong>Availability:</strong>
+                {% if medicine.stock_quantity > 0 %}
+                <span class="stock-status" style="background: #d1edff; color: #0984e3;">
+                    ✓ In Stock ({{ medicine.stock_quantity }} available)
+                </span>
+                {% else %}
+                <span class="stock-status" style="background: #fab1a0; color: #e17055;">
+                    ✗ Out of Stock
+                </span>
+                {% endif %}
+            </div>
+
+            {% if medicine.stock_quantity > 0 %}
+            <div class="quantity-selector">
+                <span class="quantity-label">Quantity:</span>
+                <div class="quantity-controls">
+                    <button class="qty-btn" onclick="changeQuantity(-1)">−</button>
+                    <input type="number" id="quantity" class="qty-input" value="1" min="1" max="{{ medicine.stock_quantity }}">
+                    <button class="qty-btn" onclick="changeQuantity(1)">+</button>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="buyNow()">
+                    🛒 Buy Now
+                </button>
+                <button class="btn btn-outline" onclick="addToCart()">
+                    {% if in_cart %}
+                    ✓ Update Cart ({{ cart_quantity }})
+                    {% else %}
+                    🛍️ Add to Cart
+                    {% endif %}
+                </button>
+            </div>
+            {% else %}
+            <div class="action-buttons">
+                <button class="btn btn-primary" disabled>Out of Stock</button>
+                <button class="btn btn-outline" disabled>Notify When Available</button>
+            </div>
+            {% endif %}
+
+            {% if medicine.expiry_date %}
+            <div style="color: #636e72; font-size: 0.9rem; margin-top: 1rem;">
+                <strong>Expiry:</strong> {{ medicine.expiry_date.strftime('%B %Y') }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Detailed Information Tabs -->
+    <div class="medicine-details-tabs">
+        <div class="tab-buttons">
+            <button class="tab-btn active" onclick="openTab(event, 'description')">Description</button>
+            <button class="tab-btn" onclick="openTab(event, 'usage')">Usage & Dosage</button>
+            <button class="tab-btn" onclick="openTab(event, 'warnings')">Warnings & Side Effects</button>
+            <button class="tab-btn" onclick="openTab(event, 'ingredients')">Ingredients</button>
+        </div>
+
+        <div class="tab-content">
+            <div id="description" class="tab-pane active">
+                <div class="detail-section">
+                    <h4>About {{ medicine.name }}</h4>
+                    <p>{{ medicine.description or 'Detailed description not available.' }}</p>
+
+                    {% if medicine.category %}
+                    <h4>Category</h4>
+                    <p>{{ medicine.category }}</p>
+                    {% endif %}
+
+                    {% if medicine.batch_number %}
+                    <h4>Batch Information</h4>
+                    <p><strong>Batch Number:</strong> {{ medicine.batch_number }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div id="usage" class="tab-pane">
+                <div class="detail-section">
+                    <h4>Dosage Information</h4>
+                    <p>{{ medicine.dosage or 'Consult your doctor for proper dosage.' }}</p>
+
+                    <h4>Usage Instructions</h4>
+                    <p>{{ medicine.usage_instructions or 'Follow your doctor\'s instructions or as directed on the package.' }}</p>
+                </div>
+            </div>
+
+            <div id="warnings" class="tab-pane">
+                <div class="detail-section">
+                    <h4>Important Warnings</h4>
+                    <p>{{ medicine.warnings or 'Always consult with a healthcare professional before use.' }}</p>
+
+                    <h4>Possible Side Effects</h4>
+                    <p>{{ medicine.side_effects or 'Side effects vary by individual. Consult your doctor if you experience any adverse reactions.' }}</p>
+                </div>
+            </div>
+
+            <div id="ingredients" class="tab-pane">
+                <div class="detail-section">
+                    <h4>Active Ingredients</h4>
+                    <p>{{ medicine.ingredients or 'Ingredient information not available.' }}</p>
+
+                    {% if medicine.generic_name %}
+                    <h4>Generic Name</h4>
+                    <p>{{ medicine.generic_name }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Related Medicines -->
+    {% if related_medicines %}
+    <div class="related-medicines">
+        <h2 class="related-title">Related Medicines</h2>
+        <div class="related-grid">
+            {% for related in related_medicines %}
+            <div class="related-card" onclick="window.location.href='{{ url_for('medicine_details', medicine_id=related.id) }}'">
+                <img src="{{ related.medicine_image or '/static/images/default-medicine.jpg' }}" 
+                     alt="{{ related.name }}" class="related-image"
+                     onerror="this.src='/static/images/default-medicine.jpg'">
+                <div class="related-info">
+                    <div class="related-name">{{ related.name }}</div>
+                    <div class="related-price">₹{{ "%.2f"|format(related.price) }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function changeQuantity(delta) {
+    const qtyInput = document.getElementById('quantity');
+    const currentQty = parseInt(qtyInput.value);
+    const newQty = currentQty + delta;
+    const maxQty = parseInt(qtyInput.max);
+
+    if (newQty >= 1 && newQty <= maxQty) {
+        qtyInput.value = newQty;
+    }
+}
+
+function addToCart() {
+    const quantity = document.getElementById('quantity').value;
+
+    fetch('/user/add-to-cart', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `medicine_id={{ medicine.id }}&quantity=${quantity}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+
+            // Update button text
+            const button = document.querySelector('.btn-outline');
+            button.innerHTML = `✓ Update Cart (${quantity})`;
+        } else {
+            showNotification(data.message, 'error');
+        }
+    })
+    .catch(error => {
+        showNotification('Error adding to cart', 'error');
+    });
+}
+
+function buyNow() {
+    const quantity = document.getElementById('quantity').value;
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/user/buy-now';
+
+    const medicineInput = document.createElement('input');
+    medicineInput.type = 'hidden';
+    medicineInput.name = 'medicine_id';
+    medicineInput.value = {{ medicine.id }};
+
+    const quantityInput = document.createElement('input');
+    quantityInput.type = 'hidden';
+    quantityInput.name = 'quantity';
+    quantityInput.value = quantity;
+
+    form.appendChild(medicineInput);
+    form.appendChild(quantityInput);
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function openTab(evt, tabName) {
+    const tabcontent = document.getElementsByClassName("tab-pane");
+    for (let i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].classList.remove("active");
+    }
+
+    const tablinks = document.getElementsByClassName("tab-btn");
+    for (let i = 0; i < tablinks.length; i++) {
+        tablinks[i].classList.remove("active");
+    }
+
+    document.getElementById(tabName).classList.add("active");
+    evt.currentTarget.classList.add("active");
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 600;
+        z-index: 10000;
+        max-width: 300px;
+        background: ${type === 'success' ? '#00b894' : '#e17055'};
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    `;
+    notification.innerHTML = message;
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+        }
+    }, 3000);
+}
+</script>
+{% endblock %}

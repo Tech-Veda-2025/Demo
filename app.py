@@ -1622,6 +1622,530 @@ def admin_login():
 
     return render_template('admin/admin_login.html')
 
+@app.route('/admin/medicines')
+@admin_required
+def admin_medicines():
+    """Display all medicines with management options"""
+    connection = get_db_connection()
+    if not connection:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('admin_dashboard'))
+    
+    try:
+        cursor = connection.cursor(dictionary=True)
+        
+        # Get search and filter parameters
+        search = request.args.get('search', '').strip()
+        category = request.args.get('category', '')
+        status = request.args.get('status', '')
+        sort_by = request.args.get('sort', 'name')
+        page = int(request.args.get('page', 1))
+        per_page = 20
+        
+        # Build query conditions
+        where_conditions = []
+        params = []
+        
+        if search:
+            where_conditions.append("(name LIKE %s OR manufacturer LIKE %s OR generic_name LIKE %s)")
+            search_term = f"%{search}%"
+            params.extend([search_term, search_term, search_term])
+        
+        if category:
+            where_conditions.append("category = %s")
+            params.append(category)
+        
+        # ✅ FIXED: Use 1/0 instead of TRUE/FALSE
+        if status == 'active':
+            where_conditions.append("is_active = 1")
+        elif status == 'inactive':
+            where_conditions.append("is_active = 0")
+        elif status == 'low_stock':
+            where_conditions.append("stock_quantity < 20")
+        
+        where_clause = " WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+        
+        # Sorting options
+        order_by = {
+            'name': 'name ASC',
+            'manufacturer': 'manufacturer ASC', 
+            'price': 'price DESC',
+            'stock': 'stock_quantity ASC',
+            'created': 'created_at DESC'
+        }.get(sort_by, 'name ASC')
+        
+        # Count total medicines
+        count_query = f"SELECT COUNT(*) as total FROM medicines {where_clause}"
+        cursor.execute(count_query, params)
+        total_medicines = cursor.fetchone()['total']
+        
+        # Calculate pagination
+        offset = (page - 1) * per_page
+        total_pages = (total_medicines + per_page - 1) // per_page
+        
+        # ✅ FIXED: Explicit column selection
+        medicines_query = f"""
+            SELECT 
+                id, name, manufacturer, generic_name, category,
+                price, stock_quantity, medicine_image,
+                prescription_required, is_active, created_at,
+                expiry_date, batch_number
+            FROM medicines 
+            {where_clause}
+            ORDER BY {order_by}
+            LIMIT %s OFFSET %s
+        """
+        cursor.execute(medicines_query, params + [per_page, offset])
+        medicines = cursor.fetchall()
+        
+        # Get categories for filter
+        cursor.execute("SELECT DISTINCT category FROM medicines WHERE category IS NOT NULL ORDER BY category")
+        categories = [row['category'] for row in cursor.fetchall()]
+        
+        # ✅ FIXED: Use 1/0 for boolean comparisons  
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_medicines,
+                SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active_medicines,
+                SUM(CASE WHEN stock_quantity < 20 THEN 1 ELSE 0 END) as low_stock_medicines,
+                SUM(CASE WHEN stock_quantity = 0 THEN 1 ELSE 0 END) as out_of_stock,
+                SUM(CASE WHEN prescription_required = 1 THEN 1 ELSE 0 END) as prescription_medicines
+            FROM medicines
+        """)
+        stats = cursor.fetchone()
+        
+        cursor.close()
+        connection.close()
+        
+        return render_template('admin/medicines.html',
+                             medicines=medicines,
+                             categories=categories,
+                             stats=stats,
+                             search=search,
+                             category=category,
+                             status=status,
+                             sort_by=sort_by,
+                             page=page,
+                             total_pages=total_pages,
+                             total_medicines=total_medicines)
+        
+    except Exception as e:
+        print(f"Admin medicines error: {e}")
+        flash('Error loading medicines.', 'error')
+        return redirect(url_for('admin_dashboard'))
+
+### **2. Add New Medicine**
+@app.route('/admin/medicines/add', methods=['GET', 'POST'])
+@admin_required
+def admin_add_medicine():
+    """Add new medicine"""
+    if request.method == 'GET':
+        return render_template('admin/add_medicine.html')
+
+    try:
+        # Get form data
+        name = request.form.get('name', '').strip()
+        manufacturer = request.form.get('manufacturer', '').strip()
+        generic_name = request.form.get('generic_name', '').strip()
+        description = request.form.get('description', '').strip()
+        category = request.form.get('category', '').strip()
+        price = float(request.form.get('price', 0))
+        stock_quantity = int(request.form.get('stock_quantity', 0))
+        dosage = request.form.get('dosage', '').strip()
+        ingredients = request.form.get('ingredients', '').strip()
+        usage_instructions = request.form.get('usage_instructions', '').strip()
+        side_effects = request.form.get('side_effects', '').strip()
+        warnings = request.form.get('warnings', '').strip()
+        prescription_required = 'prescription_required' in request.form
+        batch_number = request.form.get('batch_number', '').strip()
+        expiry_date = request.form.get('expiry_date')
+
+        # Validation
+        if not name or not manufacturer or price <= 0:
+            flash('Name, manufacturer, and valid price are required.', 'error')
+            return redirect(request.url)
+
+        # Handle file upload
+        medicine_image = None
+        if 'medicine_image' in request.files:
+            file = request.files['medicine_image']
+            if file and file.filename:
+                medicine_image = save_medicine_image(file, name)
+
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        # Insert medicine
+        cursor.execute("""
+            INSERT INTO medicines (
+                name, manufacturer, generic_name, description, category,
+                price, stock_quantity, dosage, ingredients, usage_instructions,
+                side_effects, warnings, prescription_required, batch_number,
+                expiry_date, medicine_image, is_active
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s, %s, TRUE
+            )
+        """, (
+            name, manufacturer, generic_name, description, category,
+            price, stock_quantity, dosage, ingredients, usage_instructions,
+            side_effects, warnings, prescription_required, batch_number,
+            expiry_date if expiry_date else None, medicine_image
+        ))
+
+        medicine_id = cursor.lastrowid
+        connection.commit()
+
+        # Log admin activity
+        log_admin_activity(
+            session['admin_id'],
+            'MEDICINE_ADDED',
+            'medicine',
+            medicine_id,
+            {'name': name, 'manufacturer': manufacturer, 'price': price}
+        )
+
+        cursor.close()
+        connection.close()
+
+        flash(f'Medicine "{name}" added successfully!', 'success')
+        return redirect(url_for('admin_medicines'))
+
+    except Exception as e:
+        print(f"Add medicine error: {e}")
+        flash('Error adding medicine.', 'error')
+        return redirect(url_for('admin_medicines'))
+
+### **3. Edit Medicine**
+@app.route('/admin/medicines/<int:medicine_id>/edit', methods=['GET', 'POST'])
+@admin_required
+def admin_edit_medicine(medicine_id):
+    """Edit existing medicine"""
+    connection = get_db_connection()
+    if not connection:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('admin_medicines'))
+
+    try:
+        cursor = connection.cursor(dictionary=True)
+
+        # Get medicine data
+        cursor.execute("SELECT * FROM medicines WHERE id = %s", (medicine_id,))
+        medicine = cursor.fetchone()
+
+        if not medicine:
+            flash('Medicine not found.', 'error')
+            return redirect(url_for('admin_medicines'))
+
+        if request.method == 'GET':
+            cursor.close()
+            connection.close()
+            return render_template('admin/edit_medicine.html', medicine=medicine)
+
+        # Handle POST - Update medicine
+        name = request.form.get('name', '').strip()
+        manufacturer = request.form.get('manufacturer', '').strip()
+        generic_name = request.form.get('generic_name', '').strip()
+        description = request.form.get('description', '').strip()
+        category = request.form.get('category', '').strip()
+        price = float(request.form.get('price', 0))
+        stock_quantity = int(request.form.get('stock_quantity', 0))
+        dosage = request.form.get('dosage', '').strip()
+        ingredients = request.form.get('ingredients', '').strip()
+        usage_instructions = request.form.get('usage_instructions', '').strip()
+        side_effects = request.form.get('side_effects', '').strip()
+        warnings = request.form.get('warnings', '').strip()
+        prescription_required = 'prescription_required' in request.form
+        batch_number = request.form.get('batch_number', '').strip()
+        expiry_date = request.form.get('expiry_date')
+        is_active = 'is_active' in request.form
+
+        # Validation
+        if not name or not manufacturer or price <= 0:
+            flash('Name, manufacturer, and valid price are required.', 'error')
+            return redirect(request.url)
+
+        # Handle image update
+        medicine_image = medicine['medicine_image']  # Keep existing
+        if 'medicine_image' in request.files:
+            file = request.files['medicine_image']
+            if file and file.filename:
+                medicine_image = save_medicine_image(file, name)
+
+        # Update medicine
+        cursor.execute("""
+            UPDATE medicines SET
+                name = %s, manufacturer = %s, generic_name = %s,
+                description = %s, category = %s, price = %s,
+                stock_quantity = %s, dosage = %s, ingredients = %s,
+                usage_instructions = %s, side_effects = %s, warnings = %s,
+                prescription_required = %s, batch_number = %s,
+                expiry_date = %s, medicine_image = %s, is_active = %s,
+                updated_at = NOW()
+            WHERE id = %s
+        """, (
+            name, manufacturer, generic_name, description, category, price,
+            stock_quantity, dosage, ingredients, usage_instructions,
+            side_effects, warnings, prescription_required, batch_number,
+            expiry_date if expiry_date else None, medicine_image, is_active,
+            medicine_id
+        ))
+
+        connection.commit()
+
+        # Log activity
+        log_admin_activity(
+            session['admin_id'],
+            'MEDICINE_UPDATED',
+            'medicine',
+            medicine_id,
+            {'name': name, 'changes': 'Updated medicine details'}
+        )
+
+        cursor.close()
+        connection.close()
+
+        flash(f'Medicine "{name}" updated successfully!', 'success')
+        return redirect(url_for('admin_medicines'))
+
+    except Exception as e:
+        print(f"Edit medicine error: {e}")
+        flash('Error updating medicine.', 'error')
+        return redirect(url_for('admin_medicines'))
+
+### **4. Delete Medicine**
+@app.route('/admin/medicines/<int:medicine_id>/delete', methods=['POST'])
+@admin_required
+def admin_delete_medicine(medicine_id):
+    """Delete medicine (soft delete by setting is_active = False)"""
+    connection = get_db_connection()
+    if not connection:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('admin_medicines'))
+
+    try:
+        cursor = connection.cursor(dictionary=True)
+
+        # Get medicine info for logging
+        cursor.execute("SELECT name, manufacturer FROM medicines WHERE id = %s", (medicine_id,))
+        medicine = cursor.fetchone()
+
+        if not medicine:
+            flash('Medicine not found.', 'error')
+            return redirect(url_for('admin_medicines'))
+
+        # Soft delete (set is_active = False)
+        cursor.execute("UPDATE medicines SET is_active = FALSE WHERE id = %s", (medicine_id,))
+        connection.commit()
+
+        # Log activity
+        log_admin_activity(
+            session['admin_id'],
+            'MEDICINE_DELETED',
+            'medicine',
+            medicine_id,
+            {'name': medicine['name'], 'manufacturer': medicine['manufacturer']}
+        )
+
+        cursor.close()
+        connection.close()
+
+        flash(f'Medicine "{medicine["name"]}" deleted successfully!', 'success')
+        return redirect(url_for('admin_medicines'))
+
+    except Exception as e:
+        print(f"Delete medicine error: {e}")
+        flash('Error deleting medicine.', 'error')
+        return redirect(url_for('admin_medicines'))
+
+### **5. Bulk Stock Update**
+@app.route('/admin/medicines/bulk-stock', methods=['POST'])
+@admin_required
+def admin_bulk_stock_update():
+    """Bulk update medicine stock quantities"""
+    try:
+        updates = request.json.get('updates', [])
+
+        if not updates:
+            return jsonify({'success': False, 'message': 'No updates provided'})
+
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        updated_count = 0
+        for update in updates:
+            medicine_id = int(update.get('id'))
+            new_stock = int(update.get('stock', 0))
+
+            if new_stock >= 0:
+                cursor.execute(
+                    "UPDATE medicines SET stock_quantity = %s WHERE id = %s",
+                    (new_stock, medicine_id)
+                )
+                updated_count += 1
+
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+        # Log bulk activity
+        log_admin_activity(
+            session['admin_id'],
+            'BULK_STOCK_UPDATE',
+            'medicine',
+            None,
+            {'updated_count': updated_count}
+        )
+
+        return jsonify({'success': True, 'message': f'{updated_count} medicines updated'})
+
+    except Exception as e:
+        print(f"Bulk stock update error: {e}")
+        return jsonify({'success': False, 'message': 'Error updating stock'})
+
+### **6. Medicine Analytics**
+@app.route('/admin/medicines/analytics')
+@admin_required
+def admin_medicine_analytics():
+    """Medicine analytics and reports"""
+    connection = get_db_connection()
+    if not connection:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('admin_medicines'))
+
+    try:
+        cursor = connection.cursor(dictionary=True)
+
+        # Overall statistics
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_medicines,
+                SUM(CASE WHEN is_active = TRUE THEN 1 ELSE 0 END) as active_medicines,
+                SUM(CASE WHEN stock_quantity < 20 THEN 1 ELSE 0 END) as low_stock,
+                SUM(CASE WHEN stock_quantity = 0 THEN 1 ELSE 0 END) as out_of_stock,
+                SUM(CASE WHEN prescription_required = TRUE THEN 1 ELSE 0 END) as prescription_required,
+                AVG(price) as avg_price,
+                SUM(stock_quantity * price) as total_inventory_value
+        """)
+        stats = cursor.fetchone()
+
+        # Category breakdown
+        cursor.execute("""
+            SELECT 
+                category,
+                COUNT(*) as count,
+                AVG(price) as avg_price,
+                SUM(stock_quantity) as total_stock
+            FROM medicines 
+            WHERE is_active = TRUE AND category IS NOT NULL
+            GROUP BY category
+            ORDER BY count DESC
+        """)
+        category_stats = cursor.fetchall()
+
+        # Manufacturer breakdown
+        cursor.execute("""
+            SELECT 
+                manufacturer,
+                COUNT(*) as medicine_count,
+                AVG(price) as avg_price
+            FROM medicines 
+            WHERE is_active = TRUE
+            GROUP BY manufacturer
+            ORDER BY medicine_count DESC
+            LIMIT 10
+        """)
+        manufacturer_stats = cursor.fetchall()
+
+        # Low stock medicines
+        cursor.execute("""
+            SELECT name, manufacturer, stock_quantity, price
+            FROM medicines 
+            WHERE stock_quantity < 20 AND is_active = TRUE
+            ORDER BY stock_quantity ASC
+            LIMIT 20
+        """)
+        low_stock_medicines = cursor.fetchall()
+
+        # Expensive medicines
+        cursor.execute("""
+            SELECT name, manufacturer, price, category
+            FROM medicines 
+            WHERE is_active = TRUE
+            ORDER BY price DESC
+            LIMIT 10
+        """)
+        expensive_medicines = cursor.fetchall()
+
+        cursor.close()
+        connection.close()
+
+        return render_template('admin/medicine_analytics.html',
+                             stats=stats,
+                             category_stats=category_stats,
+                             manufacturer_stats=manufacturer_stats,
+                             low_stock_medicines=low_stock_medicines,
+                             expensive_medicines=expensive_medicines)
+
+    except Exception as e:
+        print(f"Medicine analytics error: {e}")
+        flash('Error loading analytics.', 'error')
+        return redirect(url_for('admin_medicines'))
+
+### **Helper Functions**
+def save_medicine_image(file, medicine_name):
+    """Save uploaded medicine image"""
+    if not file or not file.filename:
+        return None
+
+    try:
+        import os
+        from werkzeug.utils import secure_filename
+        import time
+
+        # Create upload directory
+        upload_dir = os.path.join(os.getcwd(), 'static', 'images', 'medicines')
+        os.makedirs(upload_dir, exist_ok=True)
+
+        # Generate secure filename
+        original_filename = secure_filename(file.filename)
+        name, ext = os.path.splitext(original_filename)
+
+        # Create unique filename
+        timestamp = int(time.time())
+        safe_medicine_name = secure_filename(medicine_name.replace(' ', '_').lower())
+        unique_filename = f"{safe_medicine_name}_{timestamp}{ext}"
+
+        # Save file
+        file_path = os.path.join(upload_dir, unique_filename)
+        file.save(file_path)
+
+        # Return relative path for database
+        return f"/static/images/medicines/{unique_filename}"
+
+    except Exception as e:
+        print(f"Error saving medicine image: {e}")
+        return None
+
+def log_admin_activity(admin_id, action, resource_type, resource_id, details):
+    """Log admin activity for medicine management"""
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        cursor.execute("""
+            INSERT INTO admin_activity_log (
+                admin_id, action, resource_type, resource_id, details, created_at
+            ) VALUES (%s, %s, %s, %s, %s, NOW())
+        """, (admin_id, action, resource_type, resource_id, str(details)))
+
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+    except Exception as e:
+        print(f"Error logging admin activity: {e}")
+
 @app.route('/admin/logout')
 @admin_required
 def admin_logout():
@@ -2831,69 +3355,442 @@ def debug_photos():
     return result
 
 
-@app.route('/debug/find-file/<int:doctor_id>')
-def debug_find_file(doctor_id):
-    """Find where the document file actually exists"""
-    import os
+@app.route('/buy-medicines')
+@login_required
+def buy_medicines():
+    """Display medicines in card format"""
     connection = get_db_connection()
-    cursor = connection.cursor(dictionary=True)
-    cursor.execute("SELECT qualification_proof FROM doctor_user_profiles WHERE id = %s", (doctor_id,))
-    result = cursor.fetchone()
-    
-    if result and result['qualification_proof']:
-        doc_path = result['qualification_proof']
-        
-        output = f"<h2>🔍 File Search for Doctor {doctor_id}</h2>"
-        output += f"<p><strong>DB Path:</strong> {doc_path}</p>"
-        
-        # Search in various locations
-        search_locations = [
-            doc_path,  # Exactly as stored
-            doc_path.replace('uploads/', ''),  # Without uploads prefix
-            f"static/{doc_path}",  # In static folder
-        ]
-        
-        output += "<h3>File Search Results:</h3>"
-        found_at = None
-        
-        for location in search_locations:
-            full_path = os.path.join(os.getcwd(), location)
-            exists = os.path.exists(full_path)
-            
-            if exists:
-                size = os.path.getsize(full_path)
-                output += f"<p>✅ FOUND: {location} ({size} bytes)</p>"
-                if not found_at:
-                    found_at = location
-            else:
-                output += f"<p>❌ Not found: {location}</p>"
-        
-        if found_at:
-            # Determine correct URL
-            clean_path = found_at.replace('uploads/', '') if found_at.startswith('uploads/') else found_at
-            correct_url = f"/uploads/{clean_path}"
-            
-            output += f"<h3>✅ SOLUTION:</h3>"
-            output += f"<p><strong>File found at:</strong> {found_at}</p>"
-            output += f"<p><strong>Correct URL:</strong> <a href='{correct_url}' target='_blank'>{correct_url}</a></p>"
+    if not connection:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('normal_dashboard'))
+
+    try:
+        cursor = connection.cursor(dictionary=True)
+
+        # Get search and filter parameters
+        search = request.args.get('search', '').strip()
+        category = request.args.get('category', '')
+        sort_by = request.args.get('sort', 'name')  # name, price, stock
+        page = int(request.args.get('page', 1))
+        per_page = 12
+
+        # Build query with filters
+        where_conditions = ["is_active = TRUE"]
+        params = []
+
+        if search:
+            where_conditions.append("(name LIKE %s OR manufacturer LIKE %s OR generic_name LIKE %s)")
+            search_term = f"%{search}%"
+            params.extend([search_term, search_term, search_term])
+
+        if category:
+            where_conditions.append("category = %s")
+            params.append(category)
+
+        where_clause = " AND ".join(where_conditions)
+
+        # Sorting
+        order_by = {
+            'name': 'name ASC',
+            'price_low': 'price ASC',
+            'price_high': 'price DESC',
+            'stock': 'stock_quantity DESC'
+        }.get(sort_by, 'name ASC')
+
+        # Count total medicines
+        cursor.execute(f"SELECT COUNT(*) as total FROM medicines WHERE {where_clause}", params)
+        total_medicines = cursor.fetchone()['total']
+
+        # Calculate pagination
+        offset = (page - 1) * per_page
+        total_pages = (total_medicines + per_page - 1) // per_page
+
+        # Get medicines with pagination
+        cursor.execute(f"""
+            SELECT 
+                id, name, manufacturer, price, stock_quantity, 
+                medicine_image, category, prescription_required,
+                generic_name, description
+            FROM medicines 
+            WHERE {where_clause}
+            ORDER BY {order_by}
+            LIMIT %s OFFSET %s
+        """, params + [per_page, offset])
+
+        medicines = cursor.fetchall()
+
+        # Get categories for filter dropdown
+        cursor.execute("SELECT DISTINCT category FROM medicines WHERE category IS NOT NULL AND is_active = TRUE ORDER BY category")
+        categories = [row['category'] for row in cursor.fetchall()]
+
+        # Get user's cart count
+        cursor.execute("SELECT COUNT(*) as cart_count FROM shopping_cart WHERE user_id = %s", (session['user_id'],))
+        cart_count = cursor.fetchone()['cart_count']
+
+        cursor.close()
+        connection.close()
+
+        return render_template('buy_medicines.html', 
+                             medicines=medicines,
+                             categories=categories,
+                             current_category=category,
+                             search=search,
+                             sort_by=sort_by,
+                             page=page,
+                             total_pages=total_pages,
+                             total_medicines=total_medicines,
+                             cart_count=cart_count)
+
+    except Exception as e:
+        print(f"Buy medicines error: {e}")
+        flash('Error loading medicines.', 'error')
+        return redirect(url_for('normal_dashboard'))
+
+### **2. Medicine Details Page**
+@app.route('/medicine/<int:medicine_id>')
+@login_required
+def medicine_details(medicine_id):
+    """Display detailed medicine information"""
+    connection = get_db_connection()
+    if not connection:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('buy_medicines'))
+
+    try:
+        cursor = connection.cursor(dictionary=True)
+
+        # Get medicine details
+        cursor.execute("""
+            SELECT * FROM medicines 
+            WHERE id = %s AND is_active = TRUE
+        """, (medicine_id,))
+
+        medicine = cursor.fetchone()
+        if not medicine:
+            flash('Medicine not found.', 'error')
+            return redirect(url_for('buy_medicines'))
+
+        # Check if medicine is in user's cart
+        cursor.execute("""
+            SELECT quantity FROM shopping_cart 
+            WHERE user_id = %s AND medicine_id = %s
+        """, (session['user_id'], medicine_id))
+
+        cart_item = cursor.fetchone()
+        in_cart = bool(cart_item)
+        cart_quantity = cart_item['quantity'] if cart_item else 0
+
+        # Get related medicines (same category or manufacturer)
+        cursor.execute("""
+            SELECT id, name, manufacturer, price, medicine_image, stock_quantity
+            FROM medicines 
+            WHERE (category = %s OR manufacturer = %s) 
+            AND id != %s AND is_active = TRUE 
+            LIMIT 6
+        """, (medicine['category'], medicine['manufacturer'], medicine_id))
+
+        related_medicines = cursor.fetchall()
+
+        cursor.close()
+        connection.close()
+
+        return render_template('medicine_details.html',
+                             medicine=medicine,
+                             in_cart=in_cart,
+                             cart_quantity=cart_quantity,
+                             related_medicines=related_medicines)
+
+    except Exception as e:
+        print(f"Medicine details error: {e}")
+        flash('Error loading medicine details.', 'error')
+        return redirect(url_for('buy_medicines'))
+
+### **3. Add to Cart**
+@app.route('/add-to-cart', methods=['POST'])
+@login_required
+def add_to_cart():
+    """Add medicine to shopping cart"""
+    medicine_id = int(request.form.get('medicine_id'))
+    quantity = int(request.form.get('quantity', 1))
+
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'success': False, 'message': 'Database connection error'})
+
+    try:
+        cursor = connection.cursor(dictionary=True)
+
+        # Check if medicine exists and has stock
+        cursor.execute("SELECT name, stock_quantity FROM medicines WHERE id = %s AND is_active = TRUE", (medicine_id,))
+        medicine = cursor.fetchone()
+
+        if not medicine:
+            return jsonify({'success': False, 'message': 'Medicine not found'})
+
+        if medicine['stock_quantity'] < quantity:
+            return jsonify({'success': False, 'message': f'Only {medicine["stock_quantity"]} items available'})
+
+        # Check if item already in cart
+        cursor.execute("SELECT quantity FROM shopping_cart WHERE user_id = %s AND medicine_id = %s", 
+                      (session['user_id'], medicine_id))
+        existing_item = cursor.fetchone()
+
+        if existing_item:
+            # Update quantity
+            new_quantity = existing_item['quantity'] + quantity
+            if new_quantity > medicine['stock_quantity']:
+                return jsonify({'success': False, 'message': 'Not enough stock available'})
+
+            cursor.execute("""
+                UPDATE shopping_cart 
+                SET quantity = %s, added_at = NOW() 
+                WHERE user_id = %s AND medicine_id = %s
+            """, (new_quantity, session['user_id'], medicine_id))
         else:
-            output += "<h3>❌ FILE NOT FOUND ANYWHERE</h3>"
-            output += "<p>The file may not have been uploaded successfully.</p>"
-            
-            # Show what's in the expected directory
-            expected_dir = os.path.join(os.getcwd(), 'uploads', 'doctor_profiles', 'documents')
-            if os.path.exists(expected_dir):
-                try:
-                    files = os.listdir(expected_dir)
-                    output += f"<p><strong>Files in uploads/doctor_profiles/documents/:</strong> {files}</p>"
-                except:
-                    output += "<p>Cannot read directory contents</p>"
-            else:
-                output += "<p><strong>Directory uploads/doctor_profiles/documents/ does not exist</strong></p>"
-        
-        return output
+            # Add new item
+            cursor.execute("""
+                INSERT INTO shopping_cart (user_id, medicine_id, quantity) 
+                VALUES (%s, %s, %s)
+            """, (session['user_id'], medicine_id, quantity))
+
+        connection.commit()
+
+        # Get updated cart count
+        cursor.execute("SELECT COUNT(*) as count FROM shopping_cart WHERE user_id = %s", (session['user_id'],))
+        cart_count = cursor.fetchone()['count']
+
+        cursor.close()
+        connection.close()
+
+        return jsonify({
+            'success': True, 
+            'message': f'{medicine["name"]} added to cart successfully!',
+            'cart_count': cart_count
+        })
+
+    except Exception as e:
+        print(f"Add to cart error: {e}")
+        return jsonify({'success': False, 'message': 'Error adding to cart'})
+
+### **4. Buy Now (Direct Order)**
+@app.route('/buy-now', methods=['POST'])
+@login_required
+def buy_now():
+    """Direct purchase of medicine"""
+    medicine_id = int(request.form.get('medicine_id'))
+    quantity = int(request.form.get('quantity', 1))
+
+    # Add to cart first
+    connection = get_db_connection()
+    try:
+        cursor = connection.cursor(dictionary=True)
+
+        # Check stock and add to cart
+        cursor.execute("SELECT stock_quantity FROM medicines WHERE id = %s", (medicine_id,))
+        medicine = cursor.fetchone()
+
+        if not medicine or medicine['stock_quantity'] < quantity:
+            flash('Not enough stock available.', 'error')
+            return redirect(request.referrer)
+
+        # Clear cart and add this item
+        cursor.execute("DELETE FROM shopping_cart WHERE user_id = %s", (session['user_id'],))
+        cursor.execute("""
+            INSERT INTO shopping_cart (user_id, medicine_id, quantity) 
+            VALUES (%s, %s, %s)
+        """, (session['user_id'], medicine_id, quantity))
+
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+        # Redirect to checkout
+        return redirect(url_for('checkout'))
+
+    except Exception as e:
+        print(f"Buy now error: {e}")
+        flash('Error processing purchase.', 'error')
+        return redirect(request.referrer)
+
+### **5. Shopping Cart View**
+@app.route('/cart')
+@login_required
+def view_cart():
+    """Display user's shopping cart"""
+    connection = get_db_connection()
+    if not connection:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('normal_dashboard'))
+
+    try:
+        cursor = connection.cursor(dictionary=True)
+
+        # Get cart items with medicine details
+        cursor.execute("""
+            SELECT 
+                sc.id as cart_id,
+                sc.quantity,
+                m.id as medicine_id,
+                m.name,
+                m.manufacturer,
+                m.price,
+                m.stock_quantity,
+                m.medicine_image,
+                (sc.quantity * m.price) as subtotal
+            FROM shopping_cart sc
+            JOIN medicines m ON sc.medicine_id = m.id
+            WHERE sc.user_id = %s AND m.is_active = TRUE
+            ORDER BY sc.added_at DESC
+        """, (session['user_id'],))
+
+        cart_items = cursor.fetchall()
+
+        # Calculate totals
+        total_amount = sum(item['subtotal'] for item in cart_items)
+        total_items = sum(item['quantity'] for item in cart_items)
+
+        cursor.close()
+        connection.close()
+
+        return render_template('cart.html',
+                             cart_items=cart_items,
+                             total_amount=total_amount,
+                             total_items=total_items)
+
+    except Exception as e:
+        print(f"Cart view error: {e}")
+        flash('Error loading cart.', 'error')
+        return redirect(url_for('normal_dashboard'))
+
+
+@app.route('/update-cart', methods=['POST'])
+@login_required
+def update_cart():
+    """Update cart item quantity"""
+    cart_id = int(request.form.get('cart_id'))
+    quantity = int(request.form.get('quantity'))
+
+    connection = get_db_connection()
+    try:
+        cursor = connection.cursor(dictionary=True)
+
+        if quantity <= 0:
+            # Remove item from cart
+            cursor.execute("DELETE FROM shopping_cart WHERE id = %s AND user_id = %s", (cart_id, session['user_id']))
+        else:
+            # Update quantity
+            cursor.execute("UPDATE shopping_cart SET quantity = %s WHERE id = %s AND user_id = %s", (quantity, cart_id, session['user_id']))
+
+        connection.commit()
+        return jsonify({'success': True})
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/remove-from-cart/<int:cart_id>')
+@login_required
+def remove_from_cart(cart_id):
+    """Remove item from cart"""
+    connection = get_db_connection()
+    try:
+        cursor = connection.cursor()
+        cursor.execute("DELETE FROM shopping_cart WHERE id = %s AND user_id = %s", (cart_id, session['user_id']))
+        connection.commit()
+        flash('Item removed from cart.', 'success')
+    except Exception as e:
+        flash('Error removing item.', 'error')
+
+    return redirect(url_for('view_cart'))
+
+### **2. Search & Filter Enhancement**
+@app.route('/api/medicines/search')
+def search_medicines_api():
+    """API endpoint for live search"""
+    query = request.args.get('q', '').strip()
+
+    if len(query) < 2:
+        return jsonify([])
+
+    connection = get_db_connection()
+    try:
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT id, name, manufacturer, price 
+            FROM medicines 
+            WHERE (name LIKE %s OR manufacturer LIKE %s OR generic_name LIKE %s) 
+            AND is_active = TRUE 
+            LIMIT 10
+        """, (f"%{query}%", f"%{query}%", f"%{query}%"))
+
+        results = cursor.fetchall()
+        return jsonify(results)
+
+    except Exception as e:
+        return jsonify([])
+
+@app.route('/test-medicines-debug')
+def test_medicines_debug():
+    """Debug medicines table structure"""
+    connection = get_db_connection()
+    if not connection:
+        return "<h2>❌ Database connection failed</h2>"
     
-    return f"<h2>❌ No document found for Doctor {doctor_id}</h2>"
+    try:
+        cursor = connection.cursor(dictionary=True)
+        
+        # Test 1: Current database
+        cursor.execute("SELECT DATABASE() as current_db")
+        current_db = cursor.fetchone()
+        
+        # Test 2: Check if medicines table exists
+        cursor.execute("SHOW TABLES LIKE 'medicines'")
+        table_exists = cursor.fetchone()
+        
+        # Test 3: Get table structure
+        cursor.execute("DESCRIBE medicines")
+        columns = cursor.fetchall()
+        
+        # Test 4: Check for is_active specifically
+        cursor.execute("SHOW COLUMNS FROM medicines WHERE Field = 'is_active'")
+        is_active_column = cursor.fetchone()
+        
+        # Test 5: Try simple count
+        cursor.execute("SELECT COUNT(*) as total FROM medicines")
+        total_count = cursor.fetchone()
+        
+        # Test 6: Try with is_active (this might fail)
+        try:
+            cursor.execute("SELECT COUNT(*) as active FROM medicines WHERE is_active = 1")
+            active_count = cursor.fetchone()
+        except Exception as e:
+            active_count = f"ERROR: {str(e)}"
+        
+        cursor.close()
+        connection.close()
+        
+        return f"""
+        <h1>🔍 Medicines Table Debug</h1>
+        <h3>Database Info:</h3>
+        <p><strong>Current DB:</strong> {current_db}</p>
+        <p><strong>Table Exists:</strong> {'✅ YES' if table_exists else '❌ NO'}</p>
+        
+        <h3>Table Structure:</h3>
+        <table border="1" style="border-collapse: collapse;">
+            <tr><th>Field</th><th>Type</th><th>Null</th><th>Key</th><th>Default</th></tr>
+            {''.join([f"<tr><td>{col['Field']}</td><td>{col['Type']}</td><td>{col['Null']}</td><td>{col['Key']}</td><td>{col['Default']}</td></tr>" for col in columns])}
+        </table>
+        
+        <h3>is_active Column Check:</h3>
+        <p>{is_active_column if is_active_column else '❌ is_active column NOT FOUND'}</p>
+        
+        <h3>Query Tests:</h3>
+        <p><strong>Total Medicines:</strong> {total_count['total'] if total_count else 'FAILED'}</p>
+        <p><strong>Active Medicines:</strong> {active_count if isinstance(active_count, dict) else active_count}</p>
+        """
+        
+    except Exception as e:
+        return f"<h2>❌ Debug Error:</h2><p>{str(e)}</p>"
+
 
 
 if __name__ == '__main__':

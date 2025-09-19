@@ -1,0 +1,591 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Medicines - Admin Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+.medicines-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 15px;
+    margin-bottom: 2rem;
+}
+
+.page-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.page-subtitle {
+    opacity: 0.9;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #667eea;
+    display: block;
+}
+
+.stat-label {
+    color: #636e72;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+.controls-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.controls-row {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.search-box {
+    flex: 1;
+    min-width: 250px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 12px 20px;
+    border: 2px solid #e1e5e9;
+    border-radius: 25px;
+    font-size: 1rem;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.filter-select {
+    padding: 12px 15px;
+    border: 2px solid #e1e5e9;
+    border-radius: 8px;
+    font-size: 1rem;
+    min-width: 140px;
+}
+
+.btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-success {
+    background: #00b894;
+    color: white;
+}
+
+.btn-warning {
+    background: #fdcb6e;
+    color: #2d3436;
+}
+
+.btn-danger {
+    background: #e17055;
+    color: white;
+}
+
+.btn-sm {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+}
+
+.medicines-table {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table th,
+.table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #2d3436;
+}
+
+.medicine-image {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.medicine-name {
+    font-weight: 600;
+    color: #2d3436;
+}
+
+.medicine-manufacturer {
+    color: #636e72;
+    font-size: 0.9rem;
+}
+
+.price-display {
+    font-weight: 700;
+    color: #00b894;
+    font-size: 1.1rem;
+}
+
+.stock-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.stock-good {
+    background: #d1edff;
+    color: #0984e3;
+}
+
+.stock-low {
+    background: #ffeaa7;
+    color: #e17055;
+}
+
+.stock-out {
+    background: #fab1a0;
+    color: #e17055;
+}
+
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.status-active {
+    background: #d1f2eb;
+    color: #00b894;
+}
+
+.status-inactive {
+    background: #fadbd8;
+    color: #e17055;
+}
+
+.prescription-badge {
+    background: #e84393;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 2rem;
+}
+
+.pagination a, .pagination span {
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    text-decoration: none;
+    border-radius: 5px;
+    color: #667eea;
+}
+
+.pagination .current {
+    background: #667eea;
+    color: white;
+}
+
+.bulk-actions {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+    .controls-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .search-box {
+        min-width: auto;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="medicines-container">
+    <!-- Header -->
+    <div class="page-header">
+        <h1 class="page-title">💊 Manage Medicines</h1>
+        <p class="page-subtitle">Add, edit, and manage your pharmacy inventory</p>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <span class="stat-number">{{ stats.total_medicines or 0 }}</span>
+            <div class="stat-label">Total Medicines</div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number">{{ stats.active_medicines or 0 }}</span>
+            <div class="stat-label">Active Medicines</div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number">{{ stats.low_stock_medicines or 0 }}</span>
+            <div class="stat-label">Low Stock Alert</div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number">{{ stats.out_of_stock or 0 }}</span>
+            <div class="stat-label">Out of Stock</div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number">{{ stats.prescription_medicines or 0 }}</span>
+            <div class="stat-label">Prescription Only</div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls-section">
+        <div class="controls-row">
+            <div class="search-box">
+                <form method="GET">
+                    <input type="text" name="search" class="search-input" 
+                           placeholder="🔍 Search medicines, manufacturers, or generic names..."
+                           value="{{ search }}" onchange="this.form.submit()">
+                    {% for key, value in request.args.items() %}
+                        {% if key != 'search' %}
+                        <input type="hidden" name="{{ key }}" value="{{ value }}">
+                        {% endif %}
+                    {% endfor %}
+                </form>
+            </div>
+
+            <a href="{{ url_for('admin_add_medicine') }}" class="btn btn-primary">
+                ➕ Add New Medicine
+            </a>
+
+            <a href="{{ url_for('admin_medicine_analytics') }}" class="btn btn-success">
+                📊 Analytics
+            </a>
+        </div>
+
+        <div class="controls-row">
+            <form method="GET" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <input type="hidden" name="search" value="{{ search }}">
+
+                <select name="category" class="filter-select" onchange="this.form.submit()">
+                    <option value="">All Categories</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat }}" {{ 'selected' if cat == category }}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+
+                <select name="status" class="filter-select" onchange="this.form.submit()">
+                    <option value="">All Status</option>
+                    <option value="active" {{ 'selected' if status == 'active' }}>Active Only</option>
+                    <option value="inactive" {{ 'selected' if status == 'inactive' }}>Inactive Only</option>
+                    <option value="low_stock" {{ 'selected' if status == 'low_stock' }}>Low Stock</option>
+                </select>
+
+                <select name="sort" class="filter-select" onchange="this.form.submit()">
+                    <option value="name" {{ 'selected' if sort_by == 'name' }}>Sort by Name</option>
+                    <option value="manufacturer" {{ 'selected' if sort_by == 'manufacturer' }}>Sort by Manufacturer</option>
+                    <option value="price" {{ 'selected' if sort_by == 'price' }}>Sort by Price</option>
+                    <option value="stock" {{ 'selected' if sort_by == 'stock' }}>Sort by Stock</option>
+                    <option value="created" {{ 'selected' if sort_by == 'created' }}>Sort by Date Added</option>
+                </select>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Info -->
+    {% if medicines %}
+    <div style="margin-bottom: 1rem; color: #636e72;">
+        Showing {{ medicines|length }} of {{ total_medicines }} medicines
+        {% if search %} for "{{ search }}"{% endif %}
+        {% if category %} in category "{{ category }}"{% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Bulk Actions -->
+    <div class="bulk-actions">
+        <label>
+            <input type="checkbox" id="select-all"> Select All
+        </label>
+        <button class="btn btn-warning btn-sm" onclick="bulkStockUpdate()" style="margin-left: 1rem;">
+            📦 Bulk Stock Update
+        </button>
+    </div>
+
+    <!-- Medicines Table -->
+    {% if medicines %}
+    <div class="medicines-table">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>
+                            <input type="checkbox" id="select-all-header">
+                        </th>
+                        <th>Image</th>
+                        <th>Medicine Details</th>
+                        <th>Category</th>
+                        <th>Price</th>
+                        <th>Stock</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for medicine in medicines %}
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="medicine-checkbox" 
+                                   value="{{ medicine.id }}" data-name="{{ medicine.name }}">
+                        </td>
+                        <td>
+                            <img src="{{ medicine.medicine_image or '/static/images/default-medicine.jpg' }}" 
+                                 alt="{{ medicine.name }}" class="medicine-image"
+                                 onerror="this.src='/static/images/default-medicine.jpg'">
+                        </td>
+                        <td>
+                            <div class="medicine-name">{{ medicine.name }}</div>
+                            <div class="medicine-manufacturer">{{ medicine.manufacturer }}</div>
+                            {% if medicine.generic_name %}
+                            <small style="color: #636e72;">Generic: {{ medicine.generic_name }}</small>
+                            {% endif %}
+                            {% if medicine.prescription_required %}
+                            <div style="margin-top: 4px;">
+                                <span class="prescription-badge">Rx</span>
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>{{ medicine.category or 'Uncategorized' }}</td>
+                        <td>
+                            <div class="price-display">₹{{ "%.2f"|format(medicine.price) }}</div>
+                        </td>
+                        <td>
+                            <span class="stock-badge {{ 'stock-out' if medicine.stock_quantity == 0 else 'stock-low' if medicine.stock_quantity < 20 else 'stock-good' }}">
+                                {{ medicine.stock_quantity }} units
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status-badge {{ 'status-active' if medicine.is_active else 'status-inactive' }}">
+                                {{ 'Active' if medicine.is_active else 'Inactive' }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <a href="{{ url_for('admin_edit_medicine', medicine_id=medicine.id) }}" 
+                                   class="btn btn-primary btn-sm">
+                                    ✏️ Edit
+                                </a>
+                                <form method="POST" 
+                                      action="{{ url_for('admin_delete_medicine', medicine_id=medicine.id) }}" 
+                                      style="display: inline;"
+                                      onsubmit="return confirm('Are you sure you want to delete {{ medicine.name }}?')">
+                                    <button type="submit" class="btn btn-danger btn-sm">
+                                        🗑️ Delete
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <div class="pagination">
+        {% if page > 1 %}
+        <a href="{{ url_for('admin_medicines', page=page-1, search=search, category=category, status=status, sort=sort_by) }}">
+            Previous
+        </a>
+        {% endif %}
+
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+            <span class="current">{{ p }}</span>
+            {% elif p <= 3 or p > total_pages - 3 or (p >= page - 1 and p <= page + 1) %}
+            <a href="{{ url_for('admin_medicines', page=p, search=search, category=category, status=status, sort=sort_by) }}">
+                {{ p }}
+            </a>
+            {% elif p == 4 and page > 5 %}
+            <span>...</span>
+            {% elif p == total_pages - 3 and page < total_pages - 4 %}
+            <span>...</span>
+            {% endif %}
+        {% endfor %}
+
+        {% if page < total_pages %}
+        <a href="{{ url_for('admin_medicines', page=page+1, search=search, category=category, status=status, sort=sort_by) }}">
+            Next
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div style="text-align: center; padding: 4rem; color: #636e72;">
+        <h3>No medicines found</h3>
+        <p>Try adjusting your search criteria or add new medicines.</p>
+        <a href="{{ url_for('admin_add_medicine') }}" class="btn btn-primary">➕ Add First Medicine</a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Select all functionality
+document.getElementById('select-all').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.medicine-checkbox');
+    checkboxes.forEach(checkbox => checkbox.checked = this.checked);
+});
+
+document.getElementById('select-all-header').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.medicine-checkbox');
+    checkboxes.forEach(checkbox => checkbox.checked = this.checked);
+});
+
+// Bulk stock update
+function bulkStockUpdate() {
+    const selected = document.querySelectorAll('.medicine-checkbox:checked');
+
+    if (selected.length === 0) {
+        alert('Please select medicines to update stock.');
+        return;
+    }
+
+    const updates = [];
+    selected.forEach(checkbox => {
+        const newStock = prompt(`Enter new stock for ${checkbox.dataset.name}:`);
+        if (newStock !== null && newStock !== '') {
+            const stock = parseInt(newStock);
+            if (!isNaN(stock) && stock >= 0) {
+                updates.push({
+                    id: checkbox.value,
+                    stock: stock
+                });
+            }
+        }
+    });
+
+    if (updates.length > 0) {
+        fetch('/admin/medicines/bulk-stock', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ updates: updates })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error updating stock.');
+        });
+    }
+}
+
+// Auto-submit search form
+document.querySelector('input[name="search"]').addEventListener('keyup', function(e) {
+    clearTimeout(this.searchTimeout);
+    this.searchTimeout = setTimeout(() => {
+        this.form.submit();
+    }, 500);
+});
+</script>
+{% endblock %}

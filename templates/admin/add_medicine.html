@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+
+{% block title %}Add New Medicine - Admin Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+.add-medicine-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.page-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #2d3436;
+    margin-bottom: 0.5rem;
+}
+
+.page-subtitle {
+    color: #636e72;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #2d3436;
+    margin-bottom: 0.5rem;
+}
+
+.form-label.required::after {
+    content: " *";
+    color: #e17055;
+}
+
+.form-control {
+    padding: 12px;
+    border: 2px solid #e1e5e9;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-control[type="file"] {
+    padding: 8px;
+}
+
+.form-textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.checkbox-input {
+    width: 18px;
+    height: 18px;
+}
+
+.form-help {
+    font-size: 0.85rem;
+    color: #636e72;
+    margin-top: 0.25rem;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #f0f0f0;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+    background: #ddd;
+    color: #2d3436;
+}
+
+.btn-secondary:hover {
+    background: #ccc;
+}
+
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="add-medicine-container">
+    <div class="page-header">
+        <h1 class="page-title">➕ Add New Medicine</h1>
+        <p class="page-subtitle">Enter medicine details to add to inventory</p>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data">
+        <div class="form-grid">
+            <!-- Basic Information -->
+            <div class="form-group">
+                <label for="name" class="form-label required">Medicine Name</label>
+                <input type="text" id="name" name="name" class="form-control" 
+                       placeholder="e.g., Paracetamol 500mg" required>
+            </div>
+
+            <div class="form-group">
+                <label for="manufacturer" class="form-label required">Manufacturer</label>
+                <input type="text" id="manufacturer" name="manufacturer" class="form-control" 
+                       placeholder="e.g., Cipla Ltd" required>
+            </div>
+
+            <div class="form-group">
+                <label for="generic_name" class="form-label">Generic Name</label>
+                <input type="text" id="generic_name" name="generic_name" class="form-control" 
+                       placeholder="e.g., Acetaminophen">
+            </div>
+
+            <div class="form-group">
+                <label for="category" class="form-label">Category</label>
+                <select id="category" name="category" class="form-control">
+                    <option value="">Select Category</option>
+                    <option value="Pain Relief">Pain Relief</option>
+                    <option value="Antibiotics">Antibiotics</option>
+                    <option value="Allergy">Allergy</option>
+                    <option value="Gastric">Gastric</option>
+                    <option value="Vitamins">Vitamins</option>
+                    <option value="Cardiac">Cardiac</option>
+                    <option value="Diabetes">Diabetes</option>
+                    <option value="Cough & Cold">Cough & Cold</option>
+                    <option value="Dermatology">Dermatology</option>
+                    <option value="Women's Health">Women's Health</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <!-- Pricing and Stock -->
+            <div class="form-group">
+                <label for="price" class="form-label required">Price (₹)</label>
+                <input type="number" id="price" name="price" class="form-control" 
+                       step="0.01" min="0" placeholder="0.00" required>
+            </div>
+
+            <div class="form-group">
+                <label for="stock_quantity" class="form-label">Stock Quantity</label>
+                <input type="number" id="stock_quantity" name="stock_quantity" class="form-control" 
+                       min="0" value="0" placeholder="0">
+            </div>
+
+            <!-- Medicine Details -->
+            <div class="form-group">
+                <label for="dosage" class="form-label">Dosage</label>
+                <input type="text" id="dosage" name="dosage" class="form-control" 
+                       placeholder="e.g., 1-2 tablets every 4-6 hours">
+            </div>
+
+            <div class="form-group">
+                <label for="batch_number" class="form-label">Batch Number</label>
+                <input type="text" id="batch_number" name="batch_number" class="form-control" 
+                       placeholder="e.g., BN123456">
+            </div>
+
+            <div class="form-group">
+                <label for="expiry_date" class="form-label">Expiry Date</label>
+                <input type="date" id="expiry_date" name="expiry_date" class="form-control">
+            </div>
+
+            <!-- Medicine Image -->
+            <div class="form-group">
+                <label for="medicine_image" class="form-label">Medicine Image</label>
+                <input type="file" id="medicine_image" name="medicine_image" class="form-control" 
+                       accept="image/*">
+                <div class="form-help">Upload JPG, PNG or GIF (max 5MB)</div>
+            </div>
+        </div>
+
+        <!-- Full Width Fields -->
+        <div class="form-group full-width">
+            <label for="description" class="form-label">Description</label>
+            <textarea id="description" name="description" class="form-control form-textarea" 
+                      placeholder="Brief description of the medicine and its uses..."></textarea>
+        </div>
+
+        <div class="form-group full-width">
+            <label for="ingredients" class="form-label">Active Ingredients</label>
+            <textarea id="ingredients" name="ingredients" class="form-control form-textarea" 
+                      placeholder="List of active ingredients..."></textarea>
+        </div>
+
+        <div class="form-group full-width">
+            <label for="usage_instructions" class="form-label">Usage Instructions</label>
+            <textarea id="usage_instructions" name="usage_instructions" class="form-control form-textarea" 
+                      placeholder="How to use this medicine..."></textarea>
+        </div>
+
+        <div class="form-group full-width">
+            <label for="side_effects" class="form-label">Side Effects</label>
+            <textarea id="side_effects" name="side_effects" class="form-control form-textarea" 
+                      placeholder="Possible side effects..."></textarea>
+        </div>
+
+        <div class="form-group full-width">
+            <label for="warnings" class="form-label">Warnings & Precautions</label>
+            <textarea id="warnings" name="warnings" class="form-control form-textarea" 
+                      placeholder="Important warnings and precautions..."></textarea>
+        </div>
+
+        <!-- Checkboxes -->
+        <div class="checkbox-group">
+            <input type="checkbox" id="prescription_required" name="prescription_required" class="checkbox-input">
+            <label for="prescription_required" class="form-label">Prescription Required</label>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                💾 Save Medicine
+            </button>
+            <a href="{{ url_for('admin_medicines') }}" class="btn btn-secondary">
+                ❌ Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const name = document.getElementById('name').value.trim();
+    const manufacturer = document.getElementById('manufacturer').value.trim();
+    const price = parseFloat(document.getElementById('price').value);
+
+    if (!name) {
+        alert('Medicine name is required.');
+        e.preventDefault();
+        return;
+    }
+
+    if (!manufacturer) {
+        alert('Manufacturer is required.');
+        e.preventDefault();
+        return;
+    }
+
+    if (isNaN(price) || price <= 0) {
+        alert('Please enter a valid price greater than 0.');
+        e.preventDefault();
+        return;
+    }
+});
+
+// File size validation
+document.getElementById('medicine_image').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (file.size > maxSize) {
+            alert('File size must be less than 5MB.');
+            e.target.value = '';
+        }
+    }
+});
+</script>
+{% endblock %}

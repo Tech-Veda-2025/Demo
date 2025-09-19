@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+
+{% block title %}My Cart - Buy Medicines{% endblock %}
+
+{% block extra_css %}
+<style>
+.cart-container {
+    max-width: 900px;
+    margin: 2.5rem auto;
+    padding: 2rem;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(46, 204, 113, 0.12);
+}
+.cart-header {
+    text-align: center;
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #2d3436;
+    margin-bottom: 1.5rem;
+}
+.cart-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 2rem;
+}
+.cart-table th, .cart-table td {
+    padding: 1rem 0.7rem;
+    text-align: center;
+    border-bottom: 1px solid #e1e5e9;
+}
+.cart-table th {
+    background: #f7f7fb;
+    color: #636e72;
+    font-weight: 700;
+}
+.cart-table img {
+    width: 70px;
+    height: 70px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1.5px solid #d1d8e0;
+    background: #f8f9fa;
+}
+.medicine-name {
+    font-weight: 600;
+    color: #353b48;
+    font-size: 1.07rem;
+}
+.cart-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+.qty-input {
+    width: 50px;
+    text-align: center;
+    padding: 6px;
+    border: 1.5px solid #c4c4c4;
+    border-radius: 7px;
+    font-weight: 600;
+}
+.qty-btn {
+    background: #f4f8fb;
+    border: none;
+    border-radius: 7px;
+    font-size: 1.1rem;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    color: #667eea;
+    font-weight: 700;
+    transition: background 0.2s;
+}
+.qty-btn:hover {
+    background: #e0e6fd;
+}
+.remove-btn {
+    background: #e17055;
+    border: none;
+    color: #fff;
+    padding: 8px 18px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 0.98rem;
+    font-weight: 600;
+    transition: background 0.22s;
+}
+.remove-btn:hover {
+    background: #c23c1c;
+}
+.cart-summary {
+    background: #ecf3ff;
+    border-radius: 11px;
+    padding: 2rem 2.2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+.summary-label {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #636e72;
+    margin-bottom: 0.5rem;
+}
+.summary-value {
+    font-size: 2.1rem;
+    color: #00b894;
+    font-weight: 800;
+    margin-bottom: 1rem;
+}
+.checkout-btn {
+    background: linear-gradient(135deg, #667eea 0%, #00b894 100%);
+    color: white;
+    font-weight: 700;
+    border: none;
+    border-radius: 11px;
+    padding: 15px 34px;
+    font-size: 1.25rem;
+    cursor: pointer;
+    margin-top: 10px;
+    box-shadow: 0 6px 22px rgba(46, 204, 113, 0.13);
+    transition: background 0.21s;
+}
+.checkout-btn:hover {
+    background: linear-gradient(135deg, #33d9b2 0%, #667eea 100%);
+}
+.empty-cart {
+    text-align: center;
+    color: #b2bec3;
+    padding: 4rem 0 2rem 0;
+}
+.empty-cart h2 {
+    font-size: 2.1rem;
+    color: #a5b1c2;
+    margin-bottom: 1rem;
+}
+
+.back-button {
+    position: fixed;
+    top: 100px;
+    left: 20px;
+    background: var(--white);
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    z-index: 1000;
+    box-shadow: var(--shadow);
+}
+
+.back-button:hover {
+    background: var(--primary-color);
+    color: var(--white);
+    transform: scale(1.1);
+}
+
+.empty-cart a {
+    color: #667eea;
+    text-decoration: underline;
+    font-size: 1rem;
+}
+@media (max-width: 768px) {
+    .cart-container {
+        padding: 1rem;
+    }
+    .cart-summary {
+        padding: 1rem;
+    }
+    .cart-table th, .cart-table td {
+        padding: 0.5rem 0.2rem;
+        font-size: 0.93rem;
+    }
+    .summary-value {
+        font-size: 1.35rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<a href="javascript:history.back()" class="back-button" title="Go Back">
+    ←
+</a>
+
+<div class="cart-container">
+    <div class="cart-header">🛒 My Cart</div>
+    {% if cart_items and cart_items|length > 0 %}
+    <form id="cart-form" method="post">
+        <table class="cart-table">
+            <thead>
+                <tr>
+                    <th>Photo</th>
+                    <th>Medicine</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                    <th>Subtotal</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in cart_items %}
+                <tr data-cart-id="{{ item.cart_id }}">
+                    <td>
+                        <img src="{{ item.medicine_image or '/static/images/default-medicine.jpg' }}" alt="{{ item.name }}"
+                             onerror="this.src='/static/images/default-medicine.jpg'">
+                    </td>
+                    <td>
+                        <span class="medicine-name">{{ item.name }}</span><br>
+                        <small style="color: #636e72;">{{ item.manufacturer }}</small>
+                    </td>
+                    <td>₹{{ "%.2f"|format(item.price) }}</td>
+                    <td>
+                        <div class="cart-actions">
+                            <button type="button" class="qty-btn" onclick="updateQty({{ item.cart_id }}, -1)">−</button>
+                            <input type="number" class="qty-input"
+                                id="qty-{{ item.cart_id }}" min="1" max="{{ item.stock_quantity }}"
+                                value="{{ item.quantity }}" readonly>
+                            <button type="button" class="qty-btn" onclick="updateQty({{ item.cart_id }}, 1)">+</button>
+                        </div>
+                    </td>
+                    <td>₹<span id="subtotal-{{ item.cart_id }}">{{ "%.2f"|format(item.subtotal) }}</span></td>
+                    <td>
+                        <form method="post" action="{{ url_for('remove_from_cart', cart_id=item.cart_id) }}" style="display:inline;">
+                            <button class="remove-btn" type="submit">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </form>
+    <div class="cart-summary">
+        <div class="summary-label">Total Items: {{ total_items }}</div>
+        <div class="summary-label">Total Amount:</div>
+        <div class="summary-value">₹{{ "%.2f"|format(total_amount) }}</div>
+        <a href="{{ url_for('checkout') }}">
+            <button class="checkout-btn">Proceed to Checkout</button>
+        </a>
+    </div>
+    {% else %}
+    <div class="empty-cart">
+        <h2>Your cart is empty</h2>
+        <p>Browse <a href="{{ url_for('buy_medicines') }}">Buy Medicines</a> to add items.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// AJAX cart quantity update (with proper route and CSRF as needed)
+function updateQty(cartId, delta) {
+    let qtyInput = document.getElementById(`qty-${cartId}`);
+    let currentQty = parseInt(qtyInput.value);
+    let maxQty = parseInt(qtyInput.max);
+    let newQty = currentQty + delta;
+    if (newQty < 1 || newQty > maxQty) {
+        return;
+    }
+    // AJAX POST to update quantity
+    fetch('/user/update-cart', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `cart_id=${cartId}&quantity=${newQty}`
+    }).then(resp => resp.json()).then(data => {
+        if (data.success) {
+            qtyInput.value = newQty;
+            // Optionally update subtotal on page
+            let unitPrice = parseFloat(qtyInput.closest('tr').querySelector('td:nth-child(3)').innerText.replace('₹', ''));
+            let subtotal = (unitPrice * newQty).toFixed(2);
+            document.getElementById(`subtotal-${cartId}`).innerText = subtotal;
+            // Optionally reload for accurate totals
+            setTimeout(() => location.reload(), 550);
+        } else {
+            alert(data.message || 'Could not update cart.');
+        }
+    });
+}
+</script>
+{% endblock %}
