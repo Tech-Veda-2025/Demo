@@ -436,7 +436,7 @@
 
 <script>
 function addToCart(medicineId) {
-    fetch('/user/add-to-cart', {
+    fetch('/add-to-cart', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -476,7 +476,7 @@ function addToCart(medicineId) {
 function buyNow(medicineId) {
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = '/user/buy-now';
+    form.action = '/buy-now';
 
     const medicineInput = document.createElement('input');
     medicineInput.type = 'hidden';

@@ -242,7 +242,7 @@
         <div class="summary-label">Total Items: {{ total_items }}</div>
         <div class="summary-label">Total Amount:</div>
         <div class="summary-value">₹{{ "%.2f"|format(total_amount) }}</div>
-        <a href="{{ url_for('checkout') }}">
+        <a href="#checkout">
             <button class="checkout-btn">Proceed to Checkout</button>
         </a>
     </div>
@@ -265,7 +265,7 @@ function updateQty(cartId, delta) {
         return;
     }
     // AJAX POST to update quantity
-    fetch('/user/update-cart', {
+    fetch('/update-cart', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',

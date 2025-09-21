@@ -3322,40 +3322,40 @@ def book_appointment(doctor_id):
     flash(f'Appointment booking with doctor ID {doctor_id} - Feature coming soon!', 'info')
     return redirect(url_for('find_doctor'))
 
-@app.route('/debug-photos')
-def debug_photos():
-    """Debug doctor photos in database"""
-    connection = get_db_connection()
-    cursor = connection.cursor(dictionary=True)
+# @app.route('/debug-photos')
+# def debug_photos():
+#     """Debug doctor photos in database"""
+#     connection = get_db_connection()
+#     cursor = connection.cursor(dictionary=True)
     
-    cursor.execute("""
-        SELECT 
-            du.id, du.name, du.profile_image,
-            dp.profile_photo
-        FROM doctor_users du
-        LEFT JOIN doctor_user_profiles dp ON du.id = dp.user_id
-        WHERE du.verification_status = 'verified'
-        LIMIT 5
-    """)
+#     cursor.execute("""
+#         SELECT 
+#             du.id, du.name, du.profile_image,
+#             dp.profile_photo
+#         FROM doctor_users du
+#         LEFT JOIN doctor_user_profiles dp ON du.id = dp.user_id
+#         WHERE du.verification_status = 'verified'
+#         LIMIT 5
+#     """)
     
-    doctors = cursor.fetchall()
-    cursor.close()
-    connection.close()
+#     doctors = cursor.fetchall()
+#     cursor.close()
+#     connection.close()
     
-    result = "<h2>Doctor Photos in Database:</h2>"
-    for doc in doctors:
-        photo = doc['profile_image'] or doc['profile_photo']
-        expected_url = f"/uploads/doctor_profiles/profile_photos/{photo}" if photo and '/' not in photo else f"/uploads/{photo}" if photo else "No photo"
+#     result = "<h2>Doctor Photos in Database:</h2>"
+#     for doc in doctors:
+#         photo = doc['profile_image'] or doc['profile_photo']
+#         expected_url = f"/uploads/doctor_profiles/profile_photos/{photo}" if photo and '/' not in photo else f"/uploads/{photo}" if photo else "No photo"
         
-        result += f"""
-        <p><strong>ID:</strong> {doc['id']}</p>
-        <p><strong>Name:</strong> {doc['name']}</p>
-        <p><strong>DB Photo Path:</strong> {photo or 'None'}</p>
-        <p><strong>Expected URL:</strong> {expected_url}</p>
-        <hr>
-        """
+#         result += f"""
+#         <p><strong>ID:</strong> {doc['id']}</p>
+#         <p><strong>Name:</strong> {doc['name']}</p>
+#         <p><strong>DB Photo Path:</strong> {photo or 'None'}</p>
+#         <p><strong>Expected URL:</strong> {expected_url}</p>
+#         <hr>
+#         """
     
-    return result
+#     return result
 
 
 @app.route('/buy-medicines')
@@ -3512,38 +3512,78 @@ def medicine_details(medicine_id):
 @app.route('/add-to-cart', methods=['POST'])
 @login_required
 def add_to_cart():
-    """Add medicine to shopping cart"""
-    medicine_id = int(request.form.get('medicine_id'))
-    quantity = int(request.form.get('quantity', 1))
-
-    connection = get_db_connection()
-    if not connection:
-        return jsonify({'success': False, 'message': 'Database connection error'})
-
+    """Add medicine to shopping cart - with comprehensive error handling"""
     try:
+        # Debug logging
+        print(f"=== ADD TO CART DEBUG ===")
+        print(f"User ID: {session.get('user_id')}")
+        print(f"Form data: {request.form}")
+        
+        # Get and validate input
+        medicine_id = request.form.get('medicine_id')
+        quantity = request.form.get('quantity', 1)
+        
+        print(f"Raw input - Medicine ID: {medicine_id}, Quantity: {quantity}")
+        
+        if not medicine_id:
+            return jsonify({'success': False, 'message': 'Medicine ID is required'})
+        
+        try:
+            medicine_id = int(medicine_id)
+            quantity = int(quantity)
+        except (ValueError, TypeError):
+            return jsonify({'success': False, 'message': 'Invalid medicine ID or quantity'})
+        
+        print(f"Validated - Medicine ID: {medicine_id}, Quantity: {quantity}")
+        
+        # Database operations
+        connection = get_db_connection()
+        if not connection:
+            print("❌ Database connection failed")
+            return jsonify({'success': False, 'message': 'Database connection error'})
+        
         cursor = connection.cursor(dictionary=True)
-
-        # Check if medicine exists and has stock
-        cursor.execute("SELECT name, stock_quantity FROM medicines WHERE id = %s AND is_active = TRUE", (medicine_id,))
+        
+        # Check medicine exists and is active
+        print(f"Checking medicine {medicine_id}...")
+        cursor.execute("SELECT name, stock_quantity, is_active FROM medicines WHERE id = %s", (medicine_id,))
         medicine = cursor.fetchone()
-
+        
+        print(f"Medicine found: {medicine}")
+        
         if not medicine:
+            cursor.close()
+            connection.close()
             return jsonify({'success': False, 'message': 'Medicine not found'})
-
+        
+        if not medicine.get('is_active', 0):
+            cursor.close()
+            connection.close()
+            return jsonify({'success': False, 'message': 'Medicine is not available'})
+        
         if medicine['stock_quantity'] < quantity:
+            cursor.close()
+            connection.close()
             return jsonify({'success': False, 'message': f'Only {medicine["stock_quantity"]} items available'})
-
-        # Check if item already in cart
+        
+        # Check existing cart item
+        print(f"Checking existing cart items...")
         cursor.execute("SELECT quantity FROM shopping_cart WHERE user_id = %s AND medicine_id = %s", 
                       (session['user_id'], medicine_id))
         existing_item = cursor.fetchone()
-
+        
+        print(f"Existing item: {existing_item}")
+        
         if existing_item:
-            # Update quantity
+            # Update existing item
             new_quantity = existing_item['quantity'] + quantity
+            print(f"Updating quantity from {existing_item['quantity']} to {new_quantity}")
+            
             if new_quantity > medicine['stock_quantity']:
+                cursor.close()
+                connection.close()
                 return jsonify({'success': False, 'message': 'Not enough stock available'})
-
+            
             cursor.execute("""
                 UPDATE shopping_cart 
                 SET quantity = %s, added_at = NOW() 
@@ -3551,29 +3591,110 @@ def add_to_cart():
             """, (new_quantity, session['user_id'], medicine_id))
         else:
             # Add new item
+            print(f"Adding new item to cart...")
             cursor.execute("""
                 INSERT INTO shopping_cart (user_id, medicine_id, quantity) 
                 VALUES (%s, %s, %s)
             """, (session['user_id'], medicine_id, quantity))
-
+        
         connection.commit()
-
+        print("✅ Database changes committed")
+        
         # Get updated cart count
         cursor.execute("SELECT COUNT(*) as count FROM shopping_cart WHERE user_id = %s", (session['user_id'],))
         cart_count = cursor.fetchone()['count']
-
+        
+        print(f"Updated cart count: {cart_count}")
+        
         cursor.close()
         connection.close()
-
-        return jsonify({
+        
+        response = {
             'success': True, 
             'message': f'{medicine["name"]} added to cart successfully!',
             'cart_count': cart_count
+        }
+        
+        print(f"Returning response: {response}")
+        return jsonify(response)
+        
+    except Exception as e:
+        print(f"❌ Add to cart error: {e}")
+        print(f"❌ Error type: {type(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        # ✅ CRITICAL: Always return JSON, never let Flask return HTML error page
+        return jsonify({
+            'success': False, 
+            'message': f'Server error: {str(e)}'
         })
 
-    except Exception as e:
-        print(f"Add to cart error: {e}")
-        return jsonify({'success': False, 'message': 'Error adding to cart'})
+# @app.route('/add-to-cart', methods=['POST'])
+# @login_required
+# def add_to_cart():
+#     """Add medicine to shopping cart"""
+#     medicine_id = int(request.form.get('medicine_id'))
+#     quantity = int(request.form.get('quantity', 1))
+
+#     connection = get_db_connection()
+#     if not connection:
+#         return jsonify({'success': False, 'message': 'Database connection error'})
+
+#     try:
+#         cursor = connection.cursor(dictionary=True)
+
+#         # Check if medicine exists and has stock
+#         cursor.execute("SELECT name, stock_quantity FROM medicines WHERE id = %s AND is_active = TRUE", (medicine_id,))
+#         medicine = cursor.fetchone()
+
+#         if not medicine:
+#             return jsonify({'success': False, 'message': 'Medicine not found'})
+
+#         if medicine['stock_quantity'] < quantity:
+#             return jsonify({'success': False, 'message': f'Only {medicine["stock_quantity"]} items available'})
+
+#         # Check if item already in cart
+#         cursor.execute("SELECT quantity FROM shopping_cart WHERE user_id = %s AND medicine_id = %s", 
+#                       (session['user_id'], medicine_id))
+#         existing_item = cursor.fetchone()
+
+#         if existing_item:
+#             # Update quantity
+#             new_quantity = existing_item['quantity'] + quantity
+#             if new_quantity > medicine['stock_quantity']:
+#                 return jsonify({'success': False, 'message': 'Not enough stock available'})
+
+#             cursor.execute("""
+#                 UPDATE shopping_cart 
+#                 SET quantity = %s, added_at = NOW() 
+#                 WHERE user_id = %s AND medicine_id = %s
+#             """, (new_quantity, session['user_id'], medicine_id))
+#         else:
+#             # Add new item
+#             cursor.execute("""
+#                 INSERT INTO shopping_cart (user_id, medicine_id, quantity) 
+#                 VALUES (%s, %s, %s)
+#             """, (session['user_id'], medicine_id, quantity))
+
+#         connection.commit()
+
+#         # Get updated cart count
+#         cursor.execute("SELECT COUNT(*) as count FROM shopping_cart WHERE user_id = %s", (session['user_id'],))
+#         cart_count = cursor.fetchone()['count']
+
+#         cursor.close()
+#         connection.close()
+
+#         return jsonify({
+#             'success': True, 
+#             'message': f'{medicine["name"]} added to cart successfully!',
+#             'cart_count': cart_count
+#         })
+
+#     except Exception as e:
+#         print(f"Add to cart error: {e}")
+#         return jsonify({'success': False, 'message': 'Error adding to cart'})
 
 ### **4. Buy Now (Direct Order)**
 @app.route('/buy-now', methods=['POST'])
@@ -3703,7 +3824,7 @@ def remove_from_cart(cart_id):
     except Exception as e:
         flash('Error removing item.', 'error')
 
-    return redirect(url_for('view_cart'))
+    return redirect(url_for('cart'))
 
 ### **2. Search & Filter Enhancement**
 @app.route('/api/medicines/search')
@@ -3731,64 +3852,144 @@ def search_medicines_api():
     except Exception as e:
         return jsonify([])
 
-@app.route('/test-medicines-debug')
-def test_medicines_debug():
-    """Debug medicines table structure"""
-    connection = get_db_connection()
-    if not connection:
-        return "<h2>❌ Database connection failed</h2>"
+# @app.route('/test-medicines-debug')
+# def test_medicines_debug():
+#     """Debug medicines table structure"""
+#     connection = get_db_connection()
+#     if not connection:
+#         return "<h2>❌ Database connection failed</h2>"
     
+#     try:
+#         cursor = connection.cursor(dictionary=True)
+        
+#         # Test 1: Current database
+#         cursor.execute("SELECT DATABASE() as current_db")
+#         current_db = cursor.fetchone()
+        
+#         # Test 2: Check if medicines table exists
+#         cursor.execute("SHOW TABLES LIKE 'medicines'")
+#         table_exists = cursor.fetchone()
+        
+#         # Test 3: Get table structure
+#         cursor.execute("DESCRIBE medicines")
+#         columns = cursor.fetchall()
+        
+#         # Test 4: Check for is_active specifically
+#         cursor.execute("SHOW COLUMNS FROM medicines WHERE Field = 'is_active'")
+#         is_active_column = cursor.fetchone()
+        
+#         # Test 5: Try simple count
+#         cursor.execute("SELECT COUNT(*) as total FROM medicines")
+#         total_count = cursor.fetchone()
+        
+#         # Test 6: Try with is_active (this might fail)
+#         try:
+#             cursor.execute("SELECT COUNT(*) as active FROM medicines WHERE is_active = 1")
+#             active_count = cursor.fetchone()
+#         except Exception as e:
+#             active_count = f"ERROR: {str(e)}"
+        
+#         cursor.close()
+#         connection.close()
+        
+#         return f"""
+#         <h1>🔍 Medicines Table Debug</h1>
+#         <h3>Database Info:</h3>
+#         <p><strong>Current DB:</strong> {current_db}</p>
+#         <p><strong>Table Exists:</strong> {'✅ YES' if table_exists else '❌ NO'}</p>
+        
+#         <h3>Table Structure:</h3>
+#         <table border="1" style="border-collapse: collapse;">
+#             <tr><th>Field</th><th>Type</th><th>Null</th><th>Key</th><th>Default</th></tr>
+#             {''.join([f"<tr><td>{col['Field']}</td><td>{col['Type']}</td><td>{col['Null']}</td><td>{col['Key']}</td><td>{col['Default']}</td></tr>" for col in columns])}
+#         </table>
+        
+#         <h3>is_active Column Check:</h3>
+#         <p>{is_active_column if is_active_column else '❌ is_active column NOT FOUND'}</p>
+        
+#         <h3>Query Tests:</h3>
+#         <p><strong>Total Medicines:</strong> {total_count['total'] if total_count else 'FAILED'}</p>
+#         <p><strong>Active Medicines:</strong> {active_count if isinstance(active_count, dict) else active_count}</p>
+#         """
+        
+#     except Exception as e:
+#         return f"<h2>❌ Debug Error:</h2><p>{str(e)}</p>"
+
+@app.route('/debug/test-cart-detailed')
+@login_required
+def debug_test_cart_detailed():
+    """Detailed cart system debug"""
     try:
+        connection = get_db_connection()
         cursor = connection.cursor(dictionary=True)
         
-        # Test 1: Current database
-        cursor.execute("SELECT DATABASE() as current_db")
-        current_db = cursor.fetchone()
-        
-        # Test 2: Check if medicines table exists
-        cursor.execute("SHOW TABLES LIKE 'medicines'")
-        table_exists = cursor.fetchone()
-        
-        # Test 3: Get table structure
-        cursor.execute("DESCRIBE medicines")
-        columns = cursor.fetchall()
-        
-        # Test 4: Check for is_active specifically
-        cursor.execute("SHOW COLUMNS FROM medicines WHERE Field = 'is_active'")
-        is_active_column = cursor.fetchone()
-        
-        # Test 5: Try simple count
-        cursor.execute("SELECT COUNT(*) as total FROM medicines")
-        total_count = cursor.fetchone()
-        
-        # Test 6: Try with is_active (this might fail)
-        try:
-            cursor.execute("SELECT COUNT(*) as active FROM medicines WHERE is_active = 1")
-            active_count = cursor.fetchone()
-        except Exception as e:
-            active_count = f"ERROR: {str(e)}"
+        # Get sample medicine to test with
+        cursor.execute("SELECT id, name, stock_quantity FROM medicines WHERE is_active = 1 LIMIT 1")
+        sample_medicine = cursor.fetchone()
         
         cursor.close()
         connection.close()
         
         return f"""
-        <h1>🔍 Medicines Table Debug</h1>
-        <h3>Database Info:</h3>
-        <p><strong>Current DB:</strong> {current_db}</p>
-        <p><strong>Table Exists:</strong> {'✅ YES' if table_exists else '❌ NO'}</p>
+        <h1>🛒 Detailed Cart Debug</h1>
         
-        <h3>Table Structure:</h3>
-        <table border="1" style="border-collapse: collapse;">
-            <tr><th>Field</th><th>Type</th><th>Null</th><th>Key</th><th>Default</th></tr>
-            {''.join([f"<tr><td>{col['Field']}</td><td>{col['Type']}</td><td>{col['Null']}</td><td>{col['Key']}</td><td>{col['Default']}</td></tr>" for col in columns])}
-        </table>
+        <h3>User Info:</h3>
+        <p><strong>User ID:</strong> {session.get('user_id')}</p>
         
-        <h3>is_active Column Check:</h3>
-        <p>{is_active_column if is_active_column else '❌ is_active column NOT FOUND'}</p>
+        <h3>Sample Medicine:</h3>
+        <p>{sample_medicine}</p>
         
-        <h3>Query Tests:</h3>
-        <p><strong>Total Medicines:</strong> {total_count['total'] if total_count else 'FAILED'}</p>
-        <p><strong>Active Medicines:</strong> {active_count if isinstance(active_count, dict) else active_count}</p>
+        <h3>Test Add to Cart:</h3>
+        <button onclick="testAddToCart()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px;">
+            🧪 Test Add Medicine {sample_medicine['id'] if sample_medicine else 'None'} to Cart
+        </button>
+        
+        <h3>Response Details:</h3>
+        <div id="result" style="margin-top: 20px; padding: 15px; background: #f0f0f0; border-radius: 5px;"></div>
+        
+        <script>
+        function testAddToCart() {{
+            const medicineId = {sample_medicine['id'] if sample_medicine else 1};
+            
+            console.log('🧪 Testing add to cart with medicine ID:', medicineId);
+            
+            fetch('/add-to-cart', {{
+                method: 'POST',
+                headers: {{
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                }},
+                body: `medicine_id=${{medicineId}}&quantity=1`
+            }})
+            .then(response => {{
+                console.log('📡 Response status:', response.status);
+                console.log('📡 Response headers:', [...response.headers.entries()]);
+                
+                // Get raw text first to see what we're getting
+                return response.text();
+            }})
+            .then(text => {{
+                console.log('📄 Raw response text:', text);
+                
+                document.getElementById('result').innerHTML = 
+                    '<h4>📄 Raw Response:</h4><pre style="background: white; padding: 10px; border-radius: 5px;">' + text + '</pre>';
+                
+                // Try to parse as JSON
+                try {{
+                    const data = JSON.parse(text);
+                    document.getElementById('result').innerHTML += 
+                        '<h4>✅ Parsed JSON:</h4><pre style="background: #d4edda; padding: 10px; border-radius: 5px;">' + JSON.stringify(data, null, 2) + '</pre>';
+                }} catch(e) {{
+                    document.getElementById('result').innerHTML += 
+                        '<h4>❌ JSON Parse Error:</h4><pre style="background: #f8d7da; padding: 10px; border-radius: 5px;">' + e.message + '</pre>';
+                }}
+            }})
+            .catch(error => {{
+                console.error('❌ Fetch error:', error);
+                document.getElementById('result').innerHTML = 
+                    '<h4>❌ Network Error:</h4><p style="color: red;">' + error + '</p>';
+            }});
+        }}
+        </script>
         """
         
     except Exception as e:
