@@ -390,6 +390,12 @@
             </div>
             {% endif %}
 
+
+            {% if medicine.manufacturing_date %}
+            <div style="color: #636e72; font-size: 0.9rem; margin-top: 1rem;">
+                <strong>Manufacturing:</strong> {{ medicine.manufacturing_date.strftime('%B %Y') }}
+            </div>
+            {% endif %}
             {% if medicine.expiry_date %}
             <div style="color: #636e72; font-size: 0.9rem; margin-top: 1rem;">
                 <strong>Expiry:</strong> {{ medicine.expiry_date.strftime('%B %Y') }}
@@ -416,11 +422,6 @@
                     {% if medicine.category %}
                     <h4>Category</h4>
                     <p>{{ medicine.category }}</p>
-                    {% endif %}
-
-                    {% if medicine.batch_number %}
-                    <h4>Batch Information</h4>
-                    <p><strong>Batch Number:</strong> {{ medicine.batch_number }}</p>
                     {% endif %}
                 </div>
             </div>

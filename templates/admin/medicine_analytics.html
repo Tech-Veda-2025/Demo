@@ -1,0 +1,803 @@
+{% extends "base.html" %}
+
+{% block title %}Medicine Analytics - Admin Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+.analytics-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2.5rem;
+    border-radius: 15px;
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.page-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.page-subtitle {
+    opacity: 0.9;
+    font-size: 1.1rem;
+}
+
+.stats-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border-left: 4px solid;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+}
+
+.stat-card.medicines { border-left-color: #667eea; }
+.stat-card.active { border-left-color: #00b894; }
+.stat-card.low-stock { border-left-color: #fdcb6e; }
+.stat-card.out-stock { border-left-color: #e17055; }
+.stat-card.prescription { border-left-color: #e84393; }
+.stat-card.value { border-left-color: #6c5ce7; }
+
+.stat-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.stat-number {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.stat-label {
+    color: #636e72;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.chart-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.chart-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.chart-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #2d3436;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.category-chart, .manufacturer-chart {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.category-item, .manufacturer-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    transition: background 0.3s ease;
+}
+
+.category-item:hover, .manufacturer-item:hover {
+    background: #e9ecef;
+}
+
+.category-name, .manufacturer-name {
+    font-weight: 600;
+    color: #2d3436;
+}
+
+.category-stats, .manufacturer-stats {
+    text-align: right;
+    font-size: 0.9rem;
+}
+
+.stat-value {
+    font-weight: 700;
+    color: #667eea;
+}
+
+.stat-desc {
+    color: #636e72;
+    font-size: 0.85rem;
+}
+
+.tables-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.table-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.table-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #2d3436;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.analytics-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.analytics-table th,
+.analytics-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.analytics-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #2d3436;
+    font-size: 0.9rem;
+}
+
+.analytics-table td {
+    font-size: 0.9rem;
+}
+
+.medicine-name {
+    font-weight: 600;
+    color: #2d3436;
+}
+
+.manufacturer-name-small {
+    color: #636e72;
+    font-size: 0.8rem;
+}
+
+.price-display {
+    font-weight: 700;
+    color: #00b894;
+}
+
+.stock-display {
+    font-weight: 600;
+}
+
+.stock-critical {
+    color: #e17055;
+}
+
+.stock-low {
+    color: #fdcb6e;
+}
+
+.stock-good {
+    color: #00b894;
+}
+
+.insights-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.insights-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #2d3436;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.insight-card {
+    padding: 1.5rem;
+    border-radius: 10px;
+    border-left: 4px solid;
+}
+
+.insight-card.success {
+    background: #d1f2eb;
+    border-left-color: #00b894;
+}
+
+.insight-card.warning {
+    background: #fef9e7;
+    border-left-color: #fdcb6e;
+}
+
+.insight-card.danger {
+    background: #fadbd8;
+    border-left-color: #e17055;
+}
+
+.insight-card.info {
+    background: #d6eaf8;
+    border-left-color: #667eea;
+}
+
+.insight-title {
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.insight-desc {
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-success {
+    background: #00b894;
+    color: white;
+}
+
+.btn-warning {
+    background: #fdcb6e;
+    color: #2d3436;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #636e72;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+@media (max-width: 768px) {
+    .analytics-container {
+        padding: 1rem;
+    }
+    
+    .chart-section,
+    .tables-section {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-overview {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .page-title {
+        font-size: 2rem;
+    }
+}
+
+.refresh-info {
+    text-align: center;
+    color: #636e72;
+    font-size: 0.9rem;
+    margin-top: 1rem;
+    font-style: italic;
+}
+
+.loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="analytics-container">
+    <!-- Header -->
+    <div class="page-header">
+        <h1 class="page-title">📊 Medicine Analytics</h1>
+        <p class="page-subtitle">Comprehensive insights and statistics for your pharmacy inventory</p>
+        <div class="refresh-info">
+            Last updated: {{ moment().format('MMMM Do YYYY, h:mm:ss a') if moment else 'Just now' }}
+        </div>
+    </div>
+    
+    <!-- Overall Statistics -->
+    <div class="stats-overview">
+        <div class="stat-card medicines">
+            <div class="stat-icon">💊</div>
+            <span class="stat-number">{{ stats.total_medicines or 0 }}</span>
+            <div class="stat-label">Total Medicines</div>
+        </div>
+        
+        <div class="stat-card active">
+            <div class="stat-icon">✅</div>
+            <span class="stat-number">{{ stats.active_medicines or 0 }}</span>
+            <div class="stat-label">Active Medicines</div>
+        </div>
+        
+        <div class="stat-card low-stock">
+            <div class="stat-icon">⚠️</div>
+            <span class="stat-number">{{ stats.low_stock or 0 }}</span>
+            <div class="stat-label">Low Stock Alert</div>
+        </div>
+        
+        <div class="stat-card out-stock">
+            <div class="stat-icon">❌</div>
+            <span class="stat-number">{{ stats.out_of_stock or 0 }}</span>
+            <div class="stat-label">Out of Stock</div>
+        </div>
+        
+        <div class="stat-card prescription">
+            <div class="stat-icon">🔒</div>
+            <span class="stat-number">{{ stats.prescription_required or 0 }}</span>
+            <div class="stat-label">Prescription Only</div>
+        </div>
+        
+        <div class="stat-card value">
+            <div class="stat-icon">💰</div>
+            <span class="stat-number">₹{{ "%.0f"|format(stats.total_inventory_value or 0) }}</span>
+            <div class="stat-label">Inventory Value</div>
+        </div>
+    </div>
+    
+    <!-- Charts Section -->
+    <div class="chart-section">
+        <!-- Category Distribution -->
+        <div class="chart-card">
+            <h3 class="chart-title">📋 Category Distribution</h3>
+            {% if category_stats and category_stats|length > 0 %}
+            <div class="category-chart">
+                {% for category in category_stats %}
+                <div class="category-item">
+                    <div>
+                        <div class="category-name">{{ category.category }}</div>
+                        <div class="stat-desc">Avg: ₹{{ "%.0f"|format(category.avg_price) }}</div>
+                    </div>
+                    <div class="category-stats">
+                        <div class="stat-value">{{ category.count }} medicines</div>
+                        <div class="stat-desc">{{ category.total_stock }} total stock</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <p>📊 No category data available</p>
+                <p><small>Add medicines with categories to see distribution</small></p>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Top Manufacturers -->
+        <div class="chart-card">
+            <h3 class="chart-title">🏭 Top Manufacturers</h3>
+            {% if manufacturer_stats and manufacturer_stats|length > 0 %}
+            <div class="manufacturer-chart">
+                {% for manufacturer in manufacturer_stats %}
+                <div class="manufacturer-item">
+                    <div>
+                        <div class="manufacturer-name">{{ manufacturer.manufacturer }}</div>
+                        <div class="stat-desc">Avg: ₹{{ "%.0f"|format(manufacturer.avg_price) }}</div>
+                    </div>
+                    <div class="manufacturer-stats">
+                        <div class="stat-value">{{ manufacturer.medicine_count }} medicines</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: {{ (manufacturer.medicine_count / manufacturer_stats[0].medicine_count * 100) }}%"></div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <p>🏭 No manufacturer data available</p>
+                <p><small>Add medicines to see manufacturer statistics</small></p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Data Tables -->
+    <div class="tables-section">
+        <!-- Low Stock Medicines -->
+        <div class="table-card">
+            <h3 class="table-title">
+                ⚠️ Low Stock Medicines
+                {% if low_stock_medicines and low_stock_medicines|length > 0 %}
+                <span style="background: #e17055; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.7rem; margin-left: auto;">
+                    {{ low_stock_medicines|length }} items
+                </span>
+                {% endif %}
+            </h3>
+            {% if low_stock_medicines and low_stock_medicines|length > 0 %}
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table class="analytics-table">
+                    <thead>
+                        <tr>
+                            <th>Medicine</th>
+                            <th>Stock</th>
+                            <th>Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for medicine in low_stock_medicines %}
+                        <tr>
+                            <td>
+                                <div class="medicine-name">{{ medicine.name }}</div>
+                                <div class="manufacturer-name-small">{{ medicine.manufacturer }}</div>
+                            </td>
+                            <td>
+                                <span class="stock-display {{ 'stock-critical' if medicine.stock_quantity == 0 else 'stock-low' }}">
+                                    {{ medicine.stock_quantity }} units
+                                </span>
+                            </td>
+                            <td>
+                                <span class="price-display">₹{{ "%.2f"|format(medicine.price) }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <p>✅ All medicines are well stocked!</p>
+                <p><small>No medicines with stock below 20 units</small></p>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- High Value Medicines -->
+        <div class="table-card">
+            <h3 class="table-title">
+                💎 Premium Medicines
+                {% if expensive_medicines and expensive_medicines|length > 0 %}
+                <span style="background: #6c5ce7; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.7rem; margin-left: auto;">
+                    Top {{ expensive_medicines|length }}
+                </span>
+                {% endif %}
+            </h3>
+            {% if expensive_medicines and expensive_medicines|length > 0 %}
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table class="analytics-table">
+                    <thead>
+                        <tr>
+                            <th>Medicine</th>
+                            <th>Category</th>
+                            <th>Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for medicine in expensive_medicines %}
+                        <tr>
+                            <td>
+                                <div class="medicine-name">{{ medicine.name }}</div>
+                                <div class="manufacturer-name-small">{{ medicine.manufacturer }}</div>
+                            </td>
+                            <td>
+                                <span style="background: #f0f0f0; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem;">
+                                    {{ medicine.category or 'Uncategorized' }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="price-display">₹{{ "%.2f"|format(medicine.price) }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <p>💰 No premium medicines found</p>
+                <p><small>Add medicines to see price rankings</small></p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Insights Section -->
+    <div class="insights-section">
+        <h3 class="insights-title">
+            💡 Smart Insights & Recommendations
+        </h3>
+        <div class="insights-grid">
+            <!-- Stock Health -->
+            {% set stock_health_percentage = ((stats.total_medicines - stats.out_of_stock - stats.low_stock) / stats.total_medicines * 100) if stats.total_medicines > 0 else 100 %}
+            <div class="insight-card {{ 'success' if stock_health_percentage > 80 else 'warning' if stock_health_percentage > 60 else 'danger' }}">
+                <div class="insight-title">
+                    📦 Stock Health: {{ "%.1f"|format(stock_health_percentage) }}%
+                </div>
+                <div class="insight-desc">
+                    {% if stock_health_percentage > 80 %}
+                        Excellent! Your inventory is well-maintained with adequate stock levels.
+                    {% elif stock_health_percentage > 60 %}
+                        Good stock levels, but monitor {{ stats.low_stock + stats.out_of_stock }} medicines that need restocking.
+                    {% else %}
+                        ⚠️ Immediate attention needed! {{ stats.low_stock + stats.out_of_stock }} medicines require urgent restocking.
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Category Diversity -->
+            {% set category_count = category_stats|length if category_stats else 0 %}
+            <div class="insight-card {{ 'success' if category_count > 5 else 'info' if category_count > 2 else 'warning' }}">
+                <div class="insight-title">
+                    📋 Category Diversity: {{ category_count }} categories
+                </div>
+                <div class="insight-desc">
+                    {% if category_count > 5 %}
+                        Great variety! You offer medicines across {{ category_count }} different therapeutic categories.
+                    {% elif category_count > 2 %}
+                        Good coverage with {{ category_count }} categories. Consider expanding to serve more patient needs.
+                    {% else %}
+                        Limited variety. Adding more categories can attract diverse customers.
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Average Price Analysis -->
+            {% set avg_price = stats.avg_price or 0 %}
+            <div class="insight-card info">
+                <div class="insight-title">
+                    💰 Average Medicine Price: ₹{{ "%.0f"|format(avg_price) }}
+                </div>
+                <div class="insight-desc">
+                    {% if avg_price > 100 %}
+                        Your inventory focuses on premium medicines. Consider adding affordable options for broader reach.
+                    {% elif avg_price > 50 %}
+                        Balanced pricing strategy with mix of affordable and premium medicines.
+                    {% else %}
+                        Affordable medicine focus. Great for serving cost-conscious customers.
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Prescription Medicine Ratio -->
+            {% set prescription_ratio = (stats.prescription_required / stats.total_medicines * 100) if stats.total_medicines > 0 else 0 %}
+            <div class="insight-card {{ 'success' if prescription_ratio > 30 else 'info' if prescription_ratio > 15 else 'warning' }}">
+                <div class="insight-title">
+                    🔒 Prescription Medicines: {{ "%.1f"|format(prescription_ratio) }}%
+                </div>
+                <div class="insight-desc">
+                    {% if prescription_ratio > 30 %}
+                        Strong clinical focus with significant prescription medicine inventory.
+                    {% elif prescription_ratio > 15 %}
+                        Balanced mix of prescription and over-the-counter medicines.
+                    {% else %}
+                        OTC-focused inventory. Consider adding more prescription medicines for clinical needs.
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <a href="{{ url_for('admin_medicines') }}" class="btn btn-primary">
+            📋 Manage Medicines
+        </a>
+        <a href="{{ url_for('admin_add_medicine') }}" class="btn btn-success">
+            ➕ Add New Medicine
+        </a>
+        <button onclick="refreshAnalytics()" class="btn btn-warning" id="refreshBtn">
+            🔄 Refresh Data
+        </button>
+    </div>
+</div>
+
+<script>
+// Refresh analytics data
+function refreshAnalytics() {
+    const refreshBtn = document.getElementById('refreshBtn');
+    const container = document.querySelector('.analytics-container');
+    
+    // Show loading state
+    refreshBtn.innerHTML = '⏳ Refreshing...';
+    refreshBtn.disabled = true;
+    container.classList.add('loading');
+    
+    // Simulate refresh (replace with actual AJAX call if needed)
+    setTimeout(() => {
+        location.reload();
+    }, 1000);
+}
+
+// Auto-refresh every 5 minutes
+let autoRefreshInterval;
+
+function startAutoRefresh() {
+    autoRefreshInterval = setInterval(() => {
+        console.log('Auto-refreshing analytics...');
+        // You can implement silent background refresh here
+    }, 5 * 60 * 1000); // 5 minutes
+}
+
+function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+    }
+}
+
+// Start auto-refresh on page load
+document.addEventListener('DOMContentLoaded', function() {
+    startAutoRefresh();
+    
+    // Add hover effects to stat cards
+    document.querySelectorAll('.stat-card').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px) scale(1.02)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+        });
+    });
+    
+    // Animate progress bars
+    setTimeout(() => {
+        document.querySelectorAll('.progress-fill').forEach(bar => {
+            const width = bar.style.width;
+            bar.style.width = '0%';
+            setTimeout(() => {
+                bar.style.width = width;
+            }, 100);
+        });
+    }, 500);
+    
+    // Add click handlers for insight cards
+    document.querySelectorAll('.insight-card').forEach(card => {
+        card.addEventListener('click', function() {
+            this.style.transform = 'scale(0.98)';
+            setTimeout(() => {
+                this.style.transform = 'scale(1)';
+            }, 150);
+        });
+    });
+});
+
+// Stop auto-refresh when page is hidden
+document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+        stopAutoRefresh();
+    } else {
+        startAutoRefresh();
+    }
+});
+
+// Export data functionality (optional)
+function exportAnalytics() {
+    const data = {
+        timestamp: new Date().toISOString(),
+        stats: {
+            total_medicines: {{ stats.total_medicines or 0 }},
+            active_medicines: {{ stats.active_medicines or 0 }},
+            low_stock: {{ stats.low_stock or 0 }},
+            out_of_stock: {{ stats.out_of_stock or 0 }},
+            prescription_required: {{ stats.prescription_required or 0 }},
+            inventory_value: {{ stats.total_inventory_value or 0 }}
+        }
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `medicine_analytics_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// Print analytics report
+function printAnalytics() {
+    window.print();
+}
+
+// Add keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey || e.metaKey) {
+        switch(e.key) {
+            case 'r':
+                e.preventDefault();
+                refreshAnalytics();
+                break;
+            case 'p':
+                e.preventDefault();
+                printAnalytics();
+                break;
+        }
+    }
+});
+</script>
+{% endblock %}

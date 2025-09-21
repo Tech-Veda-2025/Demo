@@ -1,0 +1,677 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Medicine - {{ medicine.name }} - Admin Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+.edit-medicine-container {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.page-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #2d3436;
+    margin-bottom: 0.5rem;
+}
+
+.page-subtitle {
+    color: #636e72;
+    font-size: 1.1rem;
+}
+
+.current-image-section {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 10px;
+}
+
+.current-image {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: 10px;
+    border: 2px solid #ddd;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.image-info {
+    font-size: 0.9rem;
+    color: #636e72;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #2d3436;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+}
+
+.form-label.required::after {
+    content: " *";
+    color: #e17055;
+    font-weight: bold;
+}
+
+.form-control {
+    padding: 12px 15px;
+    border: 2px solid #e1e5e9;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    background: #fff;
+}
+
+.form-control[type="file"] {
+    padding: 10px;
+    border-style: dashed;
+}
+
+.form-textarea {
+    min-height: 100px;
+    resize: vertical;
+    font-family: inherit;
+}
+
+.form-select {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 8px center;
+    background-repeat: no-repeat;
+    background-size: 16px 12px;
+    padding-right: 40px;
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1rem 0;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e1e5e9;
+}
+
+.checkbox-input {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #667eea;
+}
+
+.checkbox-label {
+    font-weight: 500;
+    color: #2d3436;
+    cursor: pointer;
+    user-select: none;
+}
+
+.form-help {
+    font-size: 0.85rem;
+    color: #636e72;
+    margin-top: 0.25rem;
+    font-style: italic;
+}
+
+.form-error {
+    color: #e17055;
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2.5rem;
+    padding-top: 2rem;
+    border-top: 2px solid #f0f0f0;
+}
+
+.btn {
+    padding: 14px 28px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+    min-width: 140px;
+    justify-content: center;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+}
+
+.btn-outline {
+    background: transparent;
+    border: 2px solid #667eea;
+    color: #667eea;
+}
+
+.btn-outline:hover {
+    background: #667eea;
+    color: white;
+}
+
+.medicine-info-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    margin-bottom: 2rem;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.info-label {
+    font-weight: 600;
+    opacity: 0.9;
+}
+
+.info-value {
+    font-weight: 500;
+}
+
+.section-divider {
+    border: none;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #e1e5e9, transparent);
+    margin: 2rem 0;
+}
+
+@media (max-width: 768px) {
+    .edit-medicine-container {
+        margin: 1rem;
+        padding: 1.5rem;
+    }
+    
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .current-image {
+        max-width: 150px;
+        max-height: 150px;
+    }
+}
+
+@media (max-width: 480px) {
+    .page-title {
+        font-size: 1.8rem;
+    }
+    
+    .btn {
+        padding: 12px 20px;
+        font-size: 0.9rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="edit-medicine-container">
+    <!-- Header -->
+    <div class="page-header">
+        <h1 class="page-title">✏️ Edit Medicine</h1>
+        <p class="page-subtitle">Update medicine details and inventory information</p>
+    </div>
+    
+    <!-- Current Medicine Info -->
+    <div class="medicine-info-card">
+        <div class="info-row">
+            <span class="info-label">Current Medicine:</span>
+            <span class="info-value">{{ medicine.name }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Manufacturer:</span>
+            <span class="info-value">{{ medicine.manufacturer }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Current Stock:</span>
+            <span class="info-value">{{ medicine.stock_quantity }} units</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Status:</span>
+            <span class="info-value">{{ 'Active' if medicine.is_active else 'Inactive' }}</span>
+        </div>
+    </div>
+    
+    <!-- Current Image -->
+    {% if medicine.medicine_image %}
+    <div class="current-image-section">
+        <h3 style="margin-bottom: 1rem; color: #2d3436;">Current Image</h3>
+        <img src="{{ medicine.medicine_image }}" alt="{{ medicine.name }}" class="current-image"
+             onerror="this.src='/static/images/default-medicine.jpg'">
+        <div class="image-info">Upload a new image to replace this one</div>
+    </div>
+    {% endif %}
+    
+    <hr class="section-divider">
+    
+    <!-- Edit Form -->
+    <form method="POST" enctype="multipart/form-data" id="editMedicineForm">
+        <div class="form-grid">
+            <!-- Basic Information -->
+            <div class="form-group">
+                <label for="name" class="form-label required">Medicine Name</label>
+                <input type="text" id="name" name="name" class="form-control" 
+                       value="{{ medicine.name }}" required>
+                <div class="form-help">Full name of the medicine with strength</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="manufacturer" class="form-label required">Manufacturer</label>
+                <input type="text" id="manufacturer" name="manufacturer" class="form-control" 
+                       value="{{ medicine.manufacturer }}" required>
+                <div class="form-help">Name of the pharmaceutical company</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="category" class="form-label">Category</label>
+                <select id="category" name="category" class="form-control form-select">
+                    <option value="">Select Category</option>
+                    {% for category in ['Pain Relief', 'Antibiotics', 'Allergy', 'Gastric', 'Vitamins', 'Cardiac', 'Diabetes', 'Cough & Cold', 'Dermatology', "Women's Health", 'Respiratory', 'Mental Health', 'Other'] %}
+                    <option value="{{ category }}" {{ 'selected' if medicine.category == category }}>{{ category }}</option>
+                    {% endfor %}
+                </select>
+                <div class="form-help">Medicine therapeutic category</div>
+            </div>
+            
+            <!-- Pricing and Stock -->
+            <div class="form-group">
+                <label for="price" class="form-label required">Price (₹)</label>
+                <input type="number" id="price" name="price" class="form-control" 
+                       step="0.01" min="0" value="{{ medicine.price }}" required>
+                <div class="form-help">Price per unit in Indian Rupees</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="stock_quantity" class="form-label">Stock Quantity</label>
+                <input type="number" id="stock_quantity" name="stock_quantity" class="form-control" 
+                       min="0" value="{{ medicine.stock_quantity }}">
+                <div class="form-help">Available units in inventory</div>
+            </div>
+            
+            <!-- Medicine Details -->
+            <div class="form-group">
+                <label for="dosage" class="form-label">Dosage Instructions</label>
+                <input type="text" id="dosage" name="dosage" class="form-control" 
+                       value="{{ medicine.dosage or '' }}">
+                <div class="form-help">e.g., "1-2 tablets every 4-6 hours"</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="manufacturing_date" class="form-label">Manufacturing Date</label>
+                <input type="date" id="manufacturing_date" name="manufacturing_date" class="form-control" 
+                       value="{{ medicine.manufacturing_date.strftime('%Y-%m-%d') if medicine.manufacturing_date else '' }}">
+                <div class="form-help">Medicine manufacturing date</div>
+            </div>
+
+            <div class="form-group">
+                <label for="expiry_date" class="form-label">Expiry Date</label>
+                <input type="date" id="expiry_date" name="expiry_date" class="form-control" 
+                       value="{{ medicine.expiry_date.strftime('%Y-%m-%d') if medicine.expiry_date else '' }}">
+                <div class="form-help">Medicine expiration date</div>
+            </div>
+            
+            <!-- Medicine Image -->
+            <div class="form-group">
+                <label for="medicine_image" class="form-label">Update Medicine Image</label>
+                <input type="file" id="medicine_image" name="medicine_image" class="form-control" 
+                       accept="image/jpeg,image/jpg,image/png,image/gif">
+                <div class="form-help">JPG, PNG or GIF (max 5MB). Leave empty to keep current image.</div>
+            </div>
+        </div>
+        
+        <!-- Full Width Fields -->
+        <div class="form-group full-width">
+            <label for="description" class="form-label">Description</label>
+            <textarea id="description" name="description" class="form-control form-textarea" 
+                      placeholder="Brief description of the medicine and its uses...">{{ medicine.description or '' }}</textarea>
+            <div class="form-help">Detailed description of the medicine</div>
+        </div>
+        
+        <div class="form-group full-width">
+            <label for="ingredients" class="form-label">Active Ingredients</label>
+            <textarea id="ingredients" name="ingredients" class="form-control form-textarea" 
+                      placeholder="List of active ingredients...">{{ medicine.ingredients or '' }}</textarea>
+            <div class="form-help">Active pharmaceutical ingredients</div>
+        </div>
+        
+        <div class="form-group full-width">
+            <label for="usage_instructions" class="form-label">Usage Instructions</label>
+            <textarea id="usage_instructions" name="usage_instructions" class="form-control form-textarea" 
+                      placeholder="Detailed instructions on how to use this medicine...">{{ medicine.usage_instructions or '' }}</textarea>
+            <div class="form-help">How to take the medicine</div>
+        </div>
+        
+        <div class="form-group full-width">
+            <label for="side_effects" class="form-label">Side Effects</label>
+            <textarea id="side_effects" name="side_effects" class="form-control form-textarea" 
+                      placeholder="Possible side effects and precautions...">{{ medicine.side_effects or '' }}</textarea>
+            <div class="form-help">Known side effects and reactions</div>
+        </div>
+        
+        <div class="form-group full-width">
+            <label for="warnings" class="form-label">Warnings & Precautions</label>
+            <textarea id="warnings" name="warnings" class="form-control form-textarea" 
+                      placeholder="Important warnings and precautions...">{{ medicine.warnings or '' }}</textarea>
+            <div class="form-help">Important safety information</div>
+        </div>
+        
+        <!-- Checkboxes -->
+        <div class="checkbox-group">
+            <input type="checkbox" id="prescription_required" name="prescription_required" class="checkbox-input"
+                   {{ 'checked' if medicine.prescription_required }}>
+            <label for="prescription_required" class="checkbox-label">🔒 Prescription Required</label>
+        </div>
+        
+        <div class="checkbox-group">
+            <input type="checkbox" id="is_active" name="is_active" class="checkbox-input"
+                   {{ 'checked' if medicine.is_active }}>
+            <label for="is_active" class="checkbox-label">✅ Active (visible to users)</label>
+        </div>
+        
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="updateBtn">
+                💾 Update Medicine
+            </button>
+            <a href="{{ url_for('admin_medicines') }}" class="btn btn-outline">
+                📋 Back to List
+            </a>
+            <a href="{{ url_for('admin_medicines') }}" class="btn btn-secondary">
+                ❌ Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+// Form validation
+document.getElementById('editMedicineForm').addEventListener('submit', function(e) {
+    const name = document.getElementById('name').value.trim();
+    const manufacturer = document.getElementById('manufacturer').value.trim();
+    const price = parseFloat(document.getElementById('price').value);
+    const stock = parseInt(document.getElementById('stock_quantity').value);
+    
+    // Validation checks
+    if (!name) {
+        alert('❌ Medicine name is required.');
+        e.preventDefault();
+        document.getElementById('name').focus();
+        return;
+    }
+    
+    if (name.length < 3) {
+        alert('❌ Medicine name must be at least 3 characters long.');
+        e.preventDefault();
+        document.getElementById('name').focus();
+        return;
+    }
+    
+    if (!manufacturer) {
+        alert('❌ Manufacturer is required.');
+        e.preventDefault();
+        document.getElementById('manufacturer').focus();
+        return;
+    }
+    
+    if (isNaN(price) || price <= 0) {
+        alert('❌ Please enter a valid price greater than 0.');
+        e.preventDefault();
+        document.getElementById('price').focus();
+        return;
+    }
+    
+    if (price > 10000) {
+        if (!confirm('⚠️ Price seems very high (₹' + price + '). Are you sure?')) {
+            e.preventDefault();
+            return;
+        }
+    }
+    
+    if (isNaN(stock) || stock < 0) {
+        alert('❌ Stock quantity must be 0 or greater.');
+        e.preventDefault();
+        document.getElementById('stock_quantity').focus();
+        return;
+    }
+    
+    // Show loading state
+    const updateBtn = document.getElementById('updateBtn');
+    updateBtn.innerHTML = '⏳ Updating...';
+    updateBtn.disabled = true;
+});
+
+// File size validation
+document.getElementById('medicine_image').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        // Check file size (5MB limit)
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (file.size > maxSize) {
+            alert('❌ File size must be less than 5MB.');
+            e.target.value = '';
+            return;
+        }
+        
+        // Check file type
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        if (!allowedTypes.includes(file.type)) {
+            alert('❌ Please select a valid image file (JPG, PNG, or GIF).');
+            e.target.value = '';
+            return;
+        }
+        
+        // Show preview
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            // Create preview if doesn't exist
+            let preview = document.getElementById('imagePreview');
+            if (!preview) {
+                preview = document.createElement('img');
+                preview.id = 'imagePreview';
+                preview.style.cssText = 'max-width: 150px; max-height: 150px; margin-top: 10px; border-radius: 8px; border: 2px solid #ddd;';
+                document.getElementById('medicine_image').parentNode.appendChild(preview);
+            }
+            preview.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Auto-calculate price validation
+document.getElementById('price').addEventListener('input', function(e) {
+    const price = parseFloat(e.target.value);
+    const priceGroup = e.target.parentNode;
+    
+    // Remove existing warnings
+    const existingWarning = priceGroup.querySelector('.price-warning');
+    if (existingWarning) {
+        existingWarning.remove();
+    }
+    
+    // Add warning for unusual prices
+    if (price > 1000) {
+        const warning = document.createElement('div');
+        warning.className = 'price-warning';
+        warning.style.cssText = 'color: #e17055; font-size: 0.85rem; margin-top: 0.25rem;';
+        warning.innerHTML = '⚠️ High price - please verify';
+        priceGroup.appendChild(warning);
+    }
+});
+
+// Stock level warnings
+document.getElementById('stock_quantity').addEventListener('input', function(e) {
+    const stock = parseInt(e.target.value);
+    const stockGroup = e.target.parentNode;
+    
+    // Remove existing warnings
+    const existingWarning = stockGroup.querySelector('.stock-warning');
+    if (existingWarning) {
+        existingWarning.remove();
+    }
+    
+    // Add warning for low stock
+    if (stock >= 0 && stock < 10) {
+        const warning = document.createElement('div');
+        warning.className = 'stock-warning';
+        warning.style.cssText = 'color: #fdcb6e; font-size: 0.85rem; margin-top: 0.25rem;';
+        warning.innerHTML = '⚠️ Low stock level';
+        stockGroup.appendChild(warning);
+    } else if (stock === 0) {
+        const warning = document.createElement('div');
+        warning.className = 'stock-warning';
+        warning.style.cssText = 'color: #e17055; font-size: 0.85rem; margin-top: 0.25rem;';
+        warning.innerHTML = '❌ Out of stock';
+        stockGroup.appendChild(warning);
+    }
+});
+
+// Expiry date validation
+document.getElementById('expiry_date').addEventListener('change', function(e) {
+    const expiryDate = new Date(e.target.value);
+    const today = new Date();
+    const expiryGroup = e.target.parentNode;
+    
+    // Remove existing warnings
+    const existingWarning = expiryGroup.querySelector('.expiry-warning');
+    if (existingWarning) {
+        existingWarning.remove();
+    }
+    
+    // Add warning for expired or soon-to-expire medicines
+    if (expiryDate < today) {
+        const warning = document.createElement('div');
+        warning.className = 'expiry-warning';
+        warning.style.cssText = 'color: #e17055; font-size: 0.85rem; margin-top: 0.25rem;';
+        warning.innerHTML = '❌ This medicine is expired';
+        expiryGroup.appendChild(warning);
+    } else {
+        const monthsToExpiry = (expiryDate - today) / (1000 * 60 * 60 * 24 * 30);
+        if (monthsToExpiry < 6) {
+            const warning = document.createElement('div');
+            warning.className = 'expiry-warning';
+            warning.style.cssText = 'color: #fdcb6e; font-size: 0.85rem; margin-top: 0.25rem;';
+            warning.innerHTML = '⚠️ Expires in less than 6 months';
+            expiryGroup.appendChild(warning);
+        }
+    }
+});
+
+// Character counter for textareas
+document.querySelectorAll('textarea').forEach(textarea => {
+    textarea.addEventListener('input', function() {
+        const maxLength = 500; // Reasonable limit
+        const currentLength = this.value.length;
+        
+        let counter = this.parentNode.querySelector('.char-counter');
+        if (!counter) {
+            counter = document.createElement('div');
+            counter.className = 'char-counter';
+            counter.style.cssText = 'font-size: 0.8rem; color: #636e72; text-align: right; margin-top: 0.25rem;';
+            this.parentNode.appendChild(counter);
+        }
+        
+        counter.innerHTML = `${currentLength} characters`;
+        if (currentLength > maxLength) {
+            counter.style.color = '#e17055';
+        } else {
+            counter.style.color = '#636e72';
+        }
+    });
+});
+
+// Unsaved changes warning
+let formChanged = false;
+document.querySelectorAll('input, select, textarea').forEach(element => {
+    element.addEventListener('change', function() {
+        formChanged = true;
+    });
+});
+
+window.addEventListener('beforeunload', function(e) {
+    if (formChanged) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
+
+// Reset form changed flag on submit
+document.getElementById('editMedicineForm').addEventListener('submit', function() {
+    formChanged = false;
+});
+</script>
+{% endblock %}

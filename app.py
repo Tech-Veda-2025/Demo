@@ -1647,7 +1647,7 @@ def admin_medicines():
         params = []
         
         if search:
-            where_conditions.append("(name LIKE %s OR manufacturer LIKE %s OR generic_name LIKE %s)")
+            where_conditions.append("(name LIKE %s OR manufacturer LIKE %s)")
             search_term = f"%{search}%"
             params.extend([search_term, search_term, search_term])
         
@@ -1686,10 +1686,10 @@ def admin_medicines():
         # ✅ FIXED: Explicit column selection
         medicines_query = f"""
             SELECT 
-                id, name, manufacturer, generic_name, category,
+                id, name, manufacturer, category,
                 price, stock_quantity, medicine_image,
                 prescription_required, is_active, created_at,
-                expiry_date, batch_number
+                expiry_date
             FROM medicines 
             {where_clause}
             ORDER BY {order_by}
@@ -1746,7 +1746,6 @@ def admin_add_medicine():
         # Get form data
         name = request.form.get('name', '').strip()
         manufacturer = request.form.get('manufacturer', '').strip()
-        generic_name = request.form.get('generic_name', '').strip()
         description = request.form.get('description', '').strip()
         category = request.form.get('category', '').strip()
         price = float(request.form.get('price', 0))
@@ -1757,8 +1756,8 @@ def admin_add_medicine():
         side_effects = request.form.get('side_effects', '').strip()
         warnings = request.form.get('warnings', '').strip()
         prescription_required = 'prescription_required' in request.form
-        batch_number = request.form.get('batch_number', '').strip()
         expiry_date = request.form.get('expiry_date')
+        manufacturing_date = request.form.get('manufacturing_date')
 
         # Validation
         if not name or not manufacturer or price <= 0:
@@ -1778,19 +1777,19 @@ def admin_add_medicine():
         # Insert medicine
         cursor.execute("""
             INSERT INTO medicines (
-                name, manufacturer, generic_name, description, category,
+                name, manufacturer, description, category,
                 price, stock_quantity, dosage, ingredients, usage_instructions,
-                side_effects, warnings, prescription_required, batch_number,
-                expiry_date, medicine_image, is_active
+                side_effects, warnings, prescription_required,
+                expiry_date, manufacturing_date, medicine_image, is_active
             ) VALUES (
                 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                %s, %s, %s, %s, %s, %s, TRUE
+                %s, %s, %s, %s, %s, TRUE
             )
         """, (
-            name, manufacturer, generic_name, description, category,
+            name, manufacturer, description, category,
             price, stock_quantity, dosage, ingredients, usage_instructions,
-            side_effects, warnings, prescription_required, batch_number,
-            expiry_date if expiry_date else None, medicine_image
+            side_effects, warnings, prescription_required, 
+            expiry_date if expiry_date else None, manufacturing_date if manufacturing_date else None, medicine_image
         ))
 
         medicine_id = cursor.lastrowid
@@ -1845,7 +1844,7 @@ def admin_edit_medicine(medicine_id):
         # Handle POST - Update medicine
         name = request.form.get('name', '').strip()
         manufacturer = request.form.get('manufacturer', '').strip()
-        generic_name = request.form.get('generic_name', '').strip()
+        
         description = request.form.get('description', '').strip()
         category = request.form.get('category', '').strip()
         price = float(request.form.get('price', 0))
@@ -1856,7 +1855,7 @@ def admin_edit_medicine(medicine_id):
         side_effects = request.form.get('side_effects', '').strip()
         warnings = request.form.get('warnings', '').strip()
         prescription_required = 'prescription_required' in request.form
-        batch_number = request.form.get('batch_number', '').strip()
+        manufacturing_date = request.form.get('manufacturing_date')
         expiry_date = request.form.get('expiry_date')
         is_active = 'is_active' in request.form
 
@@ -1875,19 +1874,19 @@ def admin_edit_medicine(medicine_id):
         # Update medicine
         cursor.execute("""
             UPDATE medicines SET
-                name = %s, manufacturer = %s, generic_name = %s,
+                name = %s, manufacturer = %s,
                 description = %s, category = %s, price = %s,
                 stock_quantity = %s, dosage = %s, ingredients = %s,
                 usage_instructions = %s, side_effects = %s, warnings = %s,
-                prescription_required = %s, batch_number = %s,
-                expiry_date = %s, medicine_image = %s, is_active = %s,
+                prescription_required = %s, expiry_date = %s,
+                manufacturing_date = %s, medicine_image = %s, is_active = %s,
                 updated_at = NOW()
             WHERE id = %s
         """, (
-            name, manufacturer, generic_name, description, category, price,
+            name, manufacturer, description, category, price,
             stock_quantity, dosage, ingredients, usage_instructions,
-            side_effects, warnings, prescription_required, batch_number,
-            expiry_date if expiry_date else None, medicine_image, is_active,
+            side_effects, warnings, prescription_required,
+            expiry_date if expiry_date else None, manufacturing_date if manufacturing_date else None, medicine_image, is_active,
             medicine_id
         ))
 
@@ -2180,6 +2179,9 @@ def admin_dashboard():
         cursor.execute("SELECT COUNT(*) as count FROM doctor_users WHERE verification_status = 'pending'")
         pending_verifications = cursor.fetchone()['count']
 
+        cursor.execute("SELECT COUNT(*) as count FROM medicines")
+        total_medicines = cursor.fetchone()['count']
+
         # Recent registrations (last 7 days)
         cursor.execute("""
             SELECT COUNT(*) as count FROM normal_users 
@@ -2200,6 +2202,7 @@ def admin_dashboard():
             'normal_users_count': normal_users_count,
             'doctor_users_count': doctor_users_count,
             'total_users': normal_users_count + doctor_users_count,
+            'total_medicines': total_medicines,
             'pending_verifications': pending_verifications,
             'recent_normal_users': recent_normal_users,
             'recent_doctor_users': recent_doctor_users
@@ -3379,7 +3382,7 @@ def buy_medicines():
         params = []
 
         if search:
-            where_conditions.append("(name LIKE %s OR manufacturer LIKE %s OR generic_name LIKE %s)")
+            where_conditions.append("(name LIKE %s OR manufacturer LIKE %s)")
             search_term = f"%{search}%"
             params.extend([search_term, search_term, search_term])
 
@@ -3410,7 +3413,7 @@ def buy_medicines():
             SELECT 
                 id, name, manufacturer, price, stock_quantity, 
                 medicine_image, category, prescription_required,
-                generic_name, description
+                description
             FROM medicines 
             WHERE {where_clause}
             ORDER BY {order_by}
@@ -3717,7 +3720,7 @@ def search_medicines_api():
         cursor.execute("""
             SELECT id, name, manufacturer, price 
             FROM medicines 
-            WHERE (name LIKE %s OR manufacturer LIKE %s OR generic_name LIKE %s) 
+            WHERE (name LIKE %s OR manufacturer LIKE %s) 
             AND is_active = TRUE 
             LIMIT 10
         """, (f"%{query}%", f"%{query}%", f"%{query}%"))

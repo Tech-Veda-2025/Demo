@@ -210,7 +210,7 @@
                 {% for item in cart_items %}
                 <tr data-cart-id="{{ item.cart_id }}">
                     <td>
-                        <img src="{{ item.medicine_image or '/static/images/default-medicine.jpg' }}" alt="{{ item.name }}"
+                        <img src="{{ item.medicine_image}}" alt="{{ item.name }}"
                              onerror="this.src='/static/images/default-medicine.jpg'">
                     </td>
                     <td>
