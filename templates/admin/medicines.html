@@ -16,6 +16,7 @@
     padding: 2rem;
     border-radius: 15px;
     margin-bottom: 2rem;
+    height: 150px;
 }
 
 .page-title {
@@ -272,6 +273,15 @@
     margin-bottom: 1rem;
 }
 
+#dashboard-btn {
+    background: var(--background-color);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    position: relative;
+    left: 1130px;
+    bottom: 80px;
+}
+
 @media (max-width: 768px) {
     .controls-row {
         flex-direction: column;
@@ -303,6 +313,9 @@
     <div class="page-header">
         <h1 class="page-title">💊 Manage Medicines</h1>
         <p class="page-subtitle">Add, edit, and manage your pharmacy inventory</p>
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary" id="dashboard-btn">
+                🏠 Dashboard
+        </a>
     </div>
 
     <!-- Statistics Cards -->
