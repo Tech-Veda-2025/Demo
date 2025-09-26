@@ -89,10 +89,11 @@
                     <span class="icon">⚡</span>
                     <span>Quick Actions</span>
                 </h4>
-                <button class="btn btn-primary" onclick="bookAppointment()">
+                <button class="btn btn-primary" onclick="window.location.href='{{ url_for('user_appointments') }}'">
                     <span class="icon">📅</span>
                     <span>Book Appointment</span>
                 </button>
+
                 <button class="btn btn-secondary" onclick="emergencyConsult()">
                     <span class="icon">🚨</span>
                     <span>Emergency Consult</span>
@@ -105,12 +106,23 @@
             <!-- Health Overview Cards -->
             <div class="dashboard-card" id="dashboard-card-1">
                 <div class="icon">📅</div>
-                <h3>Upcoming Appointments</h3>
-                <div class="number" id="appointments-count">3</div>
-                <p>Next appointment in 2 days</p>
-                <button class="btn btn-outline" onclick="viewAppointments()">View All</button>
-            </div>
-
+                    <h3>Upcoming Appointments</h3>
+                    <div class="number" id="appointments-count">{{ upcoming_count }}</div>
+                    {% if days_until_next is not none and upcoming_count > 0 %}
+                    <p>
+                        {% if days_until_next == 0 %}
+                        Next appointment is today
+                        {% elif days_until_next == 1 %}
+                        Next appointment in 1 day
+                        {% else %}
+                        Next appointment in {{ days_until_next }} days
+                        {% endif %}
+                    </p>
+                    {% else %}
+                    <p>No upcoming appointments</p>
+                    {% endif %}
+                    <a href="{{ url_for('user_appointments') }}" class="btn btn-outline">View All</a>
+                </div>
             <div class="dashboard-card" id="dashboard-card-2">
                 <div class="icon">📋</div>
                 <h3>Health Records</h3>

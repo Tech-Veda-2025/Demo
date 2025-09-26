@@ -442,9 +442,9 @@
                                    value="{{ medicine.id }}" data-name="{{ medicine.name }}">
                         </td>
                         <td>
-                            <img src="{{ medicine.medicine_image or '/static/images/default-medicine.jpg' }}" 
+                            <img src="{{ medicine.medicine_image}}" 
                                  alt="{{ medicine.name }}" class="medicine-image"
-                                 onerror="this.src='/static/images/default-medicine.jpg'">
+                                 onerror="this.src='#'">
                         </td>
                         <td>
                             <div class="medicine-name">{{ medicine.name }}</div>

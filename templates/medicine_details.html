@@ -325,9 +325,9 @@
     <!-- Main Medicine Info -->
     <div class="medicine-main">
         <div class="medicine-image-section">
-            <img src="{{ medicine.medicine_image or '/static/images/default-medicine.jpg' }}" 
+            <img src="{{ medicine.medicine_image}}" 
                  alt="{{ medicine.name }}" class="main-image"
-                 onerror="this.src='/static/images/default-medicine.jpg'">
+                 onerror="this.src='#'">
 
             {% if medicine.prescription_required %}
             <div class="prescription-badge">
@@ -467,9 +467,9 @@
         <div class="related-grid">
             {% for related in related_medicines %}
             <div class="related-card" onclick="window.location.href='{{ url_for('medicine_details', medicine_id=related.id) }}'">
-                <img src="{{ related.medicine_image or '/static/images/default-medicine.jpg' }}" 
+                <img src="{{ related.medicine_image}}" 
                      alt="{{ related.name }}" class="related-image"
-                     onerror="this.src='/static/images/default-medicine.jpg'">
+                     onerror="this.src='#'">
                 <div class="related-info">
                     <div class="related-name">{{ related.name }}</div>
                     <div class="related-price">₹{{ "%.2f"|format(related.price) }}</div>

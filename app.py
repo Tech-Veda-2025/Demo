@@ -127,6 +127,26 @@ def validate_password(password):
         return False, "Password must contain at least one number"
     return True, "Password is valid"
 
+def get_cart_count(user_id):
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT SUM(quantity) FROM shopping_cart WHERE user_id = %s
+    """, (user_id,))
+    row = cursor.fetchone()
+    cursor.close()
+    connection.close()
+    return row[0] or 0
+
+@app.context_processor
+def inject_cart_count():
+    if 'user_id' in session and session.get('user_type') == "normal":
+        cart_count = get_cart_count(session['user_id'])
+    else:
+        cart_count = 0
+    return dict(cart_count=cart_count)
+
+
 @app.context_processor
 def inject_datetime():
     return {'datetime': datetime}
@@ -424,15 +444,55 @@ def google_callback():
 
     return redirect(url_for('signin'))
 
+from datetime import date
+
 @app.route('/normal-dashboard')
 @login_required
 def normal_dashboard():
-    """Normal user dashboard"""
     if session.get('user_type') != 'normal':
         flash('Access denied.', 'error')
         return redirect(url_for('signin'))
 
-    return render_template('normal_dashboard.html')
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+
+    # Count of user's upcoming appointments
+    cursor.execute("""
+        SELECT COUNT(*) as count
+        FROM appointments
+        WHERE user_id = %s AND appointment_date >= CURDATE()
+          AND status IN ('pending', 'accepted')
+    """, (session['user_id'],))
+    row = cursor.fetchone()
+    upcoming_count = row['count'] if row else 0
+
+    # Fetch the soonest upcoming appointment
+    cursor.execute("""
+        SELECT appointment_date, appointment_time
+        FROM appointments
+        WHERE user_id = %s AND appointment_date >= CURDATE()
+          AND status IN ('pending', 'accepted')
+        ORDER BY appointment_date ASC, appointment_time ASC
+        LIMIT 1
+    """, (session['user_id'],))
+    next_appt = cursor.fetchone()
+
+    # Days until next appointment
+    days_until_next = None
+    if next_appt and next_appt['appointment_date']:
+        try:
+            days_until_next = (next_appt['appointment_date'] - date.today()).days
+        except Exception:
+            days_until_next = None
+
+    cursor.close()
+    connection.close()
+
+    return render_template(
+        'normal_dashboard.html',
+        upcoming_count=upcoming_count,
+        days_until_next=days_until_next
+    )
 
 @app.route('/doctor-dashboard')
 @login_required
@@ -3033,12 +3093,13 @@ def get_all_registered_doctors():
     """Get ALL registered verified doctors for default display"""
     connection = get_db_connection()
     if not connection:
+        print("❌ No database connection")
         return []
 
     try:
         cursor = connection.cursor(dictionary=True)
 
-        # Get all verified active doctors
+        # ✅ FIXED: Removed trailing comma and corrected field names
         cursor.execute("""
             SELECT DISTINCT
                 du.id,
@@ -3046,14 +3107,6 @@ def get_all_registered_doctors():
                 du.email,
                 du.specialty,
                 du.qualification,
-                du.experience_years,
-                du.consultation_fee,
-                du.clinic_name,
-                du.clinic_address,
-                du.bio,
-                du.available_days,
-                du.available_hours,
-                du.profile_image,
                 dp.city,
                 dp.state,
                 dp.country,
@@ -3068,18 +3121,16 @@ def get_all_registered_doctors():
             FROM doctor_users du
             LEFT JOIN doctor_user_profiles dp ON du.id = dp.user_id
             WHERE du.verification_status = 'verified' 
-            AND du.is_active = TRUE
+            AND du.is_active = 1
+            AND dp.is_profile_complete = 1
             ORDER BY 
-                CASE 
-                    WHEN du.experience_years IS NOT NULL THEN du.experience_years
-                    WHEN dp.experience IS NOT NULL THEN dp.experience
-                    ELSE 0
-                END DESC,
+                COALESCE(dp.experience, 0) DESC,
                 du.name ASC
             LIMIT 50
         """)
 
         doctors = cursor.fetchall()
+        print(f"✅ Found {len(doctors)} doctors")  # Debug
 
         # Process doctor data for display
         processed_doctors = []
@@ -3090,11 +3141,15 @@ def get_all_registered_doctors():
         cursor.close()
         connection.close()
 
+        print(f"✅ Processed {len(processed_doctors)} doctors")  # Debug
         return processed_doctors
 
     except Exception as e:
-        print(f"Get all doctors error: {e}")
+        print(f"❌ Get all doctors error: {e}")
+        import traceback
+        traceback.print_exc()
         return []
+
 
 def search_registered_doctors(location, pincode):
     """Search for registered verified doctors by location/pincode"""
@@ -3115,8 +3170,6 @@ def search_registered_doctors(location, pincode):
                 (du.address LIKE %s OR 
                  dp.city LIKE %s OR 
                  dp.state LIKE %s OR
-                 du.clinic_address LIKE %s OR
-                 du.clinic_name LIKE %s OR
                  dp.address LIKE %s)
             """)
             location_param = f"%{location}%"
@@ -3132,42 +3185,30 @@ def search_registered_doctors(location, pincode):
         # Enhanced query with all doctor details
         cursor.execute(f"""
             SELECT DISTINCT
-                du.id,
-                du.name as doctor_name,
-                du.email,
-                du.specialty,
-                du.qualification,
-                du.experience_years,
-                du.consultation_fee,
-                du.clinic_name,
-                du.clinic_address,
-                du.bio,
-                du.available_days,
-                du.available_hours,
-                du.profile_image,
-                dp.city,
-                dp.state,
-                dp.country,
-                dp.pincode,
-                dp.address as home_address,
-                dp.mobile_number,
-                dp.profile_photo,
-                dp.full_name,
-                dp.consultant_fee,
-                dp.experience as profile_experience,
-                dp.specialty as profile_specialty
-            FROM doctor_users du
-            LEFT JOIN doctor_user_profiles dp ON du.id = dp.user_id
-            WHERE {where_sql}
-            ORDER BY 
-                CASE 
-                    WHEN du.experience_years IS NOT NULL THEN du.experience_years
-                    WHEN dp.experience IS NOT NULL THEN dp.experience
-                    ELSE 0
-                END DESC,
-                du.consultation_fee ASC,
-                du.name ASC
-            LIMIT 50
+    du.id,
+    du.name,
+    du.email,
+    du.specialty,
+    du.qualification,
+    dp.city,
+    dp.state,
+    dp.country,
+    dp.pincode,
+    dp.address,
+    dp.mobile_number,
+    dp.profile_photo,
+    dp.full_name,
+    dp.consultant_fee,
+    dp.experience,
+    dp.available_days
+FROM doctor_users du
+LEFT JOIN doctor_user_profiles dp ON du.id = dp.user_id
+WHERE du.verification_status = 'verified'
+  AND du.is_verified = TRUE
+  AND du.is_active = TRUE
+ORDER BY COALESCE(dp.experience, 0) DESC, du.name ASC
+LIMIT 50
+
         """, params)
 
         doctors = cursor.fetchall()
@@ -3188,80 +3229,75 @@ def search_registered_doctors(location, pincode):
         return []
 
 def process_doctor_data(doctor):
-    """Process raw doctor data for display - FIXED DOUBLE PREFIX"""
-    # Determine best name
-    doctor['display_name'] = doctor['full_name'] or doctor['doctor_name'] or 'Unknown'
+    """Process raw doctor data for display - FIXED"""
+    try:
+        # Determine best name
+        doctor['display_name'] = doctor.get('full_name') or doctor.get('doctor_name') or 'Unknown'
 
-    # CORRECTED: Photo path processing
-    profile_photo = doctor['profile_photo'] or doctor['profile_image']
-    
-    if profile_photo:
-        # Simple logic to avoid double /uploads/ prefix
-        if profile_photo.startswith('uploads/'):
-            doctor['display_photo'] = f"/{profile_photo}"  # Just add leading slash
-        elif profile_photo.startswith('/uploads/'):
-            doctor['display_photo'] = profile_photo  # Already has full path
-        else:
-            doctor['display_photo'] = f"/uploads/{profile_photo}"  # Add full prefix
-    else:
-        doctor['display_photo'] = None
-
-    # Format consultation fee
-    consultation_fee = doctor['consultation_fee'] or doctor['consultant_fee']
-    if consultation_fee and consultation_fee > 0:
-        doctor['formatted_fee'] = f"₹{consultation_fee:.0f}"
-    else:
-        doctor['formatted_fee'] = "Contact for fees"
-
-    # Format experience
-    experience = doctor['experience_years'] or doctor['profile_experience']
-    if experience and experience > 0:
-        doctor['formatted_experience'] = f"{experience} years"
-    else:
-        doctor['formatted_experience'] = "New practitioner"
-
-    # Format specialty
-    specialty = doctor['specialty'] or doctor['profile_specialty']
-    doctor['formatted_specialty'] = specialty or 'Ayurveda'
-
-    # CORRECTED: Initials generation
-    name = doctor['display_name']
-    if name.startswith('Dr. '):
-        name = name[4:]
-    name_parts = name.split()
-    if len(name_parts) >= 2:
-        doctor['initials'] = f"{name_parts[0][0]}{name_parts[1][0]}".upper()
-    elif len(name_parts) == 1:
-        doctor['initials'] = f"{name_parts[0][0]}D".upper()
-    else:
-        doctor['initials'] = "DR"
-
-    # Format clinic info
-    doctor['clinic_info'] = doctor['clinic_name'] or 'Private Practice'
-
-    # Format location
-    if doctor['city'] and doctor['state']:
-        doctor['location_display'] = f"{doctor['city']}, {doctor['state']}"
-    elif doctor['city']:
-        doctor['location_display'] = doctor['city']
-    else:
-        doctor['location_display'] = "Location not specified"
-
-    # Format availability
-    if doctor['available_days']:
-        try:
-            import json
-            days = json.loads(doctor['available_days'])
-            if isinstance(days, list) and days:
-                doctor['availability'] = ', '.join(days[:3])
+        # Handle profile photo (removed reference to non-existent 'profile_image')
+        profile_photo = doctor.get('profile_photo')
+        if profile_photo:
+            if profile_photo.startswith('uploads/'):
+                doctor['display_photo'] = f"/{profile_photo}"
+            elif profile_photo.startswith('/uploads/'):
+                doctor['display_photo'] = profile_photo
             else:
-                doctor['availability'] = 'Contact for availability'
-        except:
-            doctor['availability'] = 'Contact for availability'
-    else:
+                doctor['display_photo'] = f"/uploads/{profile_photo}"
+        else:
+            doctor['display_photo'] = None
+
+        # Format consultation fee (use 'consultant_fee' not 'consultation_fee')
+        consultation_fee = doctor.get('consultant_fee')
+        if consultation_fee and consultation_fee > 0:
+            doctor['formatted_fee'] = f"₹{consultation_fee:.0f}"
+        else:
+            doctor['formatted_fee'] = "Contact for fees"
+
+        # Format experience (use 'profile_experience' not 'experience_years')
+        experience = doctor.get('profile_experience')
+        if experience and experience > 0:
+            doctor['formatted_experience'] = f"{experience} years"
+        else:
+            doctor['formatted_experience'] = "New practitioner"
+
+        # Format specialty
+        specialty = doctor.get('specialty') or doctor.get('profile_specialty')
+        doctor['formatted_specialty'] = specialty or 'Ayurveda'
+
+        # Generate initials safely
+        name = doctor['display_name']
+        if name and name.startswith('Dr. '):
+            name = name[4:]
+        if name:
+            name_parts = name.split()
+            if len(name_parts) >= 2:
+                doctor['initials'] = f"{name_parts[0][0]}{name_parts[1][0]}".upper()
+            elif len(name_parts) == 1:
+                doctor['initials'] = f"{name_parts[0][0]}D".upper()
+            else:
+                doctor['initials'] = "DR"
+        else:
+            doctor['initials'] = "DR"
+
+        # Format clinic info (removed reference to non-existent 'clinic_name')
+        doctor['clinic_info'] = 'Private Practice'
+
+        # Format location
+        if doctor.get('city') and doctor.get('state'):
+            doctor['location_display'] = f"{doctor['city']}, {doctor['state']}"
+        elif doctor.get('city'):
+            doctor['location_display'] = doctor['city']
+        else:
+            doctor['location_display'] = "Location not specified"
+
+        # Set availability (removed reference to non-existent 'available_days')
         doctor['availability'] = 'Contact for availability'
 
-    return doctor
+        return doctor
+        
+    except Exception as e:
+        print(f"❌ Process doctor data error: {e}")
+        return doctor
 
 @app.route('/api/doctor-location/<int:doctor_id>')
 @login_required
@@ -4372,8 +4408,10 @@ def view_appointments():
         return redirect(url_for('user_appointments'))
 
 ### **4. Cancel Appointment**
+from datetime import date, datetime, time, timedelta
+
 @app.route('/cancel-appointment/<int:appointment_id>', methods=['POST'])
-@login_required  
+@login_required
 def cancel_appointment(appointment_id):
     """Cancel appointment - enhanced with comprehensive validation"""
     try:
@@ -4384,7 +4422,7 @@ def cancel_appointment(appointment_id):
             
         cursor = connection.cursor(dictionary=True)
 
-        # ✅ ENHANCED: Get comprehensive appointment details
+        # Get comprehensive appointment details
         cursor.execute("""
             SELECT 
                 id, appointment_date, appointment_time, status,
@@ -4401,7 +4439,7 @@ def cancel_appointment(appointment_id):
             connection.close()
             return redirect(url_for('view_appointments'))
 
-        # ✅ ENHANCED: More specific status checks
+        # Specific status checks
         if appointment['status'] == 'completed':
             flash('Cannot cancel a completed appointment.', 'error')
             cursor.close()
@@ -4414,19 +4452,25 @@ def cancel_appointment(appointment_id):
             connection.close()
             return redirect(url_for('view_appointments'))
 
-        # ✅ ENHANCED: Check if appointment is in the past
-        from datetime import date, datetime
+        # Handle appointment_date and appointment_time conversion
         appt_date = appointment['appointment_date']
         appt_time = appointment['appointment_time']
-        
-        # Convert to datetime for comparison
+
         if isinstance(appt_date, str):
             appt_date = datetime.strptime(appt_date, '%Y-%m-%d').date()
         if isinstance(appt_time, str):
-            appt_time = datetime.strptime(appt_time, '%H:%M:%S').time()
-            
+            try:
+                appt_time = datetime.strptime(appt_time, '%H:%M:%S').time()
+            except ValueError:
+                appt_time = datetime.strptime(appt_time, '%H:%M').time()
+        elif isinstance(appt_time, timedelta):
+            total_seconds = int(appt_time.total_seconds())
+            hours, remainder = divmod(total_seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            appt_time = time(hour=hours, minute=minutes, second=seconds)
+
         appt_datetime = datetime.combine(appt_date, appt_time)
-        
+
         if appt_datetime < datetime.now():
             flash('Cannot cancel past appointments.', 'error')
             cursor.close()
@@ -4451,8 +4495,7 @@ def cancel_appointment(appointment_id):
         cursor.close()
         connection.close()
 
-        # ✅ ENHANCED: Detailed success message
-        flash(f'Appointment with {appointment["doctor_name"]} on {appointment["appointment_date"]} at {appointment["appointment_time"]} has been cancelled successfully.', 'success')
+        flash(f'Appointment on {appointment["appointment_date"]} at {appointment["appointment_time"]} has been cancelled successfully.', 'success')
         return redirect(url_for('view_appointments'))
 
     except Exception as e:

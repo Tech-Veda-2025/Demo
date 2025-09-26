@@ -351,9 +351,9 @@
             <div class="prescription-badge">Rx Required</div>
             {% endif %}
 
-            <img src="{{ medicine.medicine_image or '/static/images/default-medicine.jpg' }}" 
+            <img src="{{ medicine.medicine_image}}" 
                  alt="{{ medicine.name }}" class="medicine-image"
-                 onerror="this.src='/static/images/default-medicine.jpg'">
+                 onerror="this.src='#'">
 
             <div class="card-content">
                 <h3 class="medicine-name">{{ medicine.name }}</h3>
