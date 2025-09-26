@@ -1,0 +1,696 @@
+{% extends "base.html" %}
+
+{% block title %}My Appointments - Healthcare Portal{% endblock %}
+
+{% block extra_css %}
+<style>
+.appointments-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: #f8f9fa;
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.page-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2d3436;
+    margin-bottom: 0.5rem;
+}
+
+.cards-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.appointment-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    overflow: hidden;
+    transition: transform 0.3s ease;
+}
+
+.appointment-card:hover {
+    transform: translateY(-5px);
+}
+
+.card-header {
+    padding: 1.5rem;
+    color: white;
+    text-align: center;
+}
+
+.upcoming-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.booking-header {
+    background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
+}
+
+.card-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.card-subtitle {
+    opacity: 0.9;
+    font-size: 0.9rem;
+}
+
+.card-content {
+    padding: 1.5rem;
+}
+
+.upcoming-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.appointment-item {
+    padding: 1rem;
+    border: 1px solid #e1e5e9;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    background: #f8f9fa;
+}
+
+.appointment-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.doctor-name {
+    font-weight: 600;
+    color: #2d3436;
+}
+
+.appointment-status {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-pending {
+    background: #ffeaa7;
+    color: #d63031;
+}
+
+.status-accepted {
+    background: #d1f2eb;
+    color: #00b894;
+}
+
+.appointment-details {
+    font-size: 0.9rem;
+    color: #636e72;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    display: block;
+    font-weight: 600;
+    color: #2d3436;
+    margin-bottom: 0.5rem;
+}
+
+.form-label.required::after {
+    content: " *";
+    color: #e17055;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e1e5e9;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-select {
+    cursor: pointer;
+}
+
+.form-textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    flex: 1;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-outline {
+    background: transparent;
+    border: 2px solid #667eea;
+    color: #667eea;
+    flex: 1;
+}
+
+.btn-outline:hover {
+    background: #667eea;
+    color: white;
+}
+
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #667eea;
+    display: block;
+}
+
+.stat-label {
+    color: #636e72;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+.empty-state {
+    text-align: center;
+    color: #636e72;
+    padding: 2rem;
+}
+
+.mode-selector {
+    display: flex;
+    gap: 1rem;
+}
+
+.mode-option {
+    flex: 1;
+    text-align: center;
+}
+
+.mode-radio {
+    display: none;
+}
+
+.mode-label {
+    display: block;
+    padding: 12px;
+    border: 2px solid #e1e5e9;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.mode-radio:checked + .mode-label {
+    border-color: #667eea;
+    background: #667eea;
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .cards-container {
+        grid-template-columns: 1fr;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .stats-row {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="appointments-container">
+    <!-- Header -->
+    <div class="page-header">
+        <h1 class="page-title">🏥 My Appointments</h1>
+        <p style="color: #636e72;">Book and manage your medical appointments</p>
+    </div>
+
+    <!-- Statistics -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <span class="stat-number">{{ stats.total_appointments or 0 }}</span>
+            <div class="stat-label">Total Appointments</div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number">{{ stats.pending_count or 0 }}</span>
+            <div class="stat-label">Pending</div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number">{{ stats.accepted_count or 0 }}</span>
+            <div class="stat-label">Accepted</div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number">{{ stats.completed_count or 0 }}</span>
+            <div class="stat-label">Completed</div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number">{{ stats.rejected_count or 0 }}</span>
+            <div class="stat-label">Rejected</div>
+        </div>
+    </div>
+
+    <!-- Main Cards -->
+    <div class="cards-container">
+        <!-- Upcoming Appointments Card -->
+        <div class="appointment-card">
+            <div class="card-header upcoming-header">
+                <div class="card-title">📅 Upcoming Appointments</div>
+                <div class="card-subtitle">Your scheduled appointments</div>
+            </div>
+            <div class="card-content">
+                {% if upcoming_appointments %}
+                <div class="upcoming-list">
+                    {% for appointment in upcoming_appointments %}
+                    <div class="appointment-item">
+                        <div class="appointment-info">
+                            <div class="doctor-name">{{ appointment.doctor_name }}</div>
+                            <span class="appointment-status status-{{ appointment.status }}">
+                                {{ appointment.status.title() }}
+                            </span>
+                        </div>
+                        <div class="appointment-details">
+                            📅 {{ appointment.appointment_date.strftime('%B %d, %Y') }} at {{ appointment.appointment_time_display }}<br>
+                            🏥 {{ appointment.specialty or appointment.specialization }}<br>
+                            📍 {{ appointment.mode.title() }} Consultation
+                            {% if appointment.reason_for_visit %}
+                            <br>💬 {{ appointment.reason_for_visit }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <h4>No upcoming appointments</h4>
+                    <p>Book your first appointment using the form on the right.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Book Appointment Card -->
+        <div class="appointment-card">
+            <div class="card-header booking-header">
+                <div class="card-title">📝 Book New Appointment</div>
+                <div class="card-subtitle">Schedule your consultation</div>
+            </div>
+            <div class="card-content">
+                <form method="POST" action="{{ url_for('book_appointment') }}" id="bookingForm">
+                    <!-- Update your doctor dropdown to include fee data -->
+                    <div class="form-group">
+                        <label for="doctor_id" class="form-label required">Doctor Name</label>
+                        <select id="doctor_id" name="doctor_id" class="form-control form-select" required>
+                            <option value="">Select a doctor</option>
+                            {% for doctor in doctors %}
+                            <option value="{{ doctor.id }}" 
+                                    data-specialty="{{ doctor.specialization }}"
+                                    data-fee="{{ doctor.consultant_fee or 0 }}"
+                                    data-city="{{ doctor.city or '' }}">
+                                {{ doctor.full_name }} - {{ doctor.specialization }}
+                                {% if doctor.experience_years %}({{ doctor.experience_years }} years exp.){% endif %}
+                                {% if doctor.city %} - {{ doctor.city }}{% endif %}
+                                {% if doctor.consultant_fee %} - ₹{{ doctor.consultant_fee }}{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="specialty" class="form-label">Specialty</label>
+                        <input type="text" id="specialty" name="specialty" class="form-control" 
+                            placeholder="Will be auto-filled based on doctor selection" readonly>
+                    </div>
+
+                    <!-- ✅ NEW: Consultation Fee Field -->
+                    <div class="form-group">
+                        <label for="consultation_fee" class="form-label">Consultation Fee</label>
+                        <div style="position: relative;">
+                            <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #636e72; font-weight: bold; font-size: 1.1rem;">₹</span>
+                            <input type="text" id="consultation_fee" name="consultation_fee" class="form-control" 
+                                style="padding-left: 35px; font-weight: bold; font-size: 1.1rem;" 
+                                placeholder="Select a doctor to see fee" readonly>
+                        </div>
+                        <small style="color: #636e72; font-size: 0.85rem;">
+                            💡 Consultation fee will be displayed when you select a doctor
+                        </small>
+                    </div>
+
+
+                    <!-- <div class="form-group">
+                        <label for="specialty" class="form-label">Specialty</label>
+                        <input type="text" id="specialty" name="specialty" class="form-control" 
+                               placeholder="Will be auto-filled based on doctor selection" readonly>
+                    </div> -->
+
+                    <div class="form-group">
+                        <label for="appointment_date" class="form-label required">Date</label>
+                        <input type="date" id="appointment_date" name="appointment_date" 
+                               class="form-control" required min="{{ date.today().isoformat() }}">
+                    </div>
+
+                    <div class="form-group">
+    <label for="appointment_time" class="form-label required">Time</label>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <select id="hour" name="hour" class="form-control form-select" required>
+            <option value="">Hour</option>
+            {% for h in range(1, 13) %}
+            <option value="{{ "%02d"|format(h) }}">{{ "%02d"|format(h) }}</option>
+            {% endfor %}
+        </select>
+        <span>:</span>
+        <select id="minute" name="minute" class="form-control form-select" required>
+            <option value="">Min</option>
+            {% for m in [0, 15, 30, 45] %}
+            <option value="{{ "%02d"|format(m) }}">{{ "%02d"|format(m) }}</option>
+            {% endfor %}
+        </select>
+        <select id="ampm" name="ampm" class="form-control form-select" required>
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+        </select>
+    </div>
+</div>
+<input type="hidden" id="appointment_time" name="appointment_time" value="">
+
+
+                    <div class="form-group">
+                        <label class="form-label required">Mode</label>
+                        <div class="mode-selector">
+                            <div class="mode-option">
+                                <input type="radio" id="mode_offline" name="mode" value="offline" class="mode-radio" checked>
+                                <label for="mode_offline" class="mode-label">
+                                    🏥 Offline<br>
+                                    <small>Visit clinic</small>
+                                </label>
+                            </div>
+                            <div class="mode-option">
+                                <input type="radio" id="mode_online" name="mode" value="online" class="mode-radio">
+                                <label for="mode_online" class="mode-label">
+                                    💻 Online<br>
+                                    <small>Video call</small>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="reason_for_visit" class="form-label">Reason for Visit</label>
+                        <textarea id="reason_for_visit" name="reason_for_visit" class="form-control form-textarea" 
+                                  placeholder="Brief description of your health concern..."></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="bookBtn">
+                            📅 Book Appointment
+                        </button>
+                        <a href="{{ url_for('view_appointments') }}" class="btn btn-outline">
+                            👁️ View Appointments
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Enhanced doctor selection with fee auto-fill
+document.getElementById('doctor_id').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const specialty = selectedOption.getAttribute('data-specialty');
+    const fee = selectedOption.getAttribute('data-fee');
+    const city = selectedOption.getAttribute('data-city');
+    
+    // Auto-fill specialty
+    document.getElementById('specialty').value = specialty || '';
+    
+    // ✅ NEW: Auto-fill consultation fee
+    const feeInput = document.getElementById('consultation_fee');
+    if (this.value) {
+        if (fee && fee !== '0' && fee !== 'null' && fee !== '') {
+            const feeAmount = parseFloat(fee);
+            feeInput.value = feeAmount.toLocaleString('en-IN');
+            feeInput.style.color = '#2d3436';
+            feeInput.style.fontWeight = 'bold';
+            feeInput.style.background = 'linear-gradient(135deg, #e8f5e8 0%, #f0f8ff 100%)';
+            feeInput.style.borderColor = '#00b894';
+        } else {
+            feeInput.value = 'Free Consultation';
+            feeInput.style.color = '#00b894';
+            feeInput.style.fontWeight = 'bold';
+            feeInput.style.background = 'linear-gradient(135deg, #e8f5e8 0%, #f0f8ff 100%)';
+            feeInput.style.borderColor = '#00b894';
+        }
+    } else {
+        // Reset when no doctor selected
+        feeInput.value = '';
+        feeInput.style.color = '';
+        feeInput.style.fontWeight = '';
+        feeInput.style.background = '';
+        feeInput.style.borderColor = '#e1e5e9';
+    }
+    
+    // Clear time slots when doctor changes
+    const timeSelect = document.getElementById('appointment_time');
+    timeSelect.innerHTML = '<option value="">Select time slot</option>';
+
+    // Load available slots if both doctor and date are selected
+    const dateInput = document.getElementById('appointment_date');
+    if (this.value && dateInput.value) {
+        loadAvailableSlots(this.value, dateInput.value);
+    }
+    
+    // ✅ NEW: Show doctor summary
+    if (this.value) {
+        showDoctorSummary(selectedOption.text, specialty, fee, city);
+    } else {
+        hideDoctorSummary();
+    }
+});
+
+// ✅ NEW: Show doctor summary card
+function showDoctorSummary(doctorName, specialty, fee, city) {
+    // Remove existing summary
+    const existingSummary = document.getElementById('doctor-summary');
+    if (existingSummary) {
+        existingSummary.remove();
+    }
+    
+    // Create new summary card
+    const summary = document.createElement('div');
+    summary.id = 'doctor-summary';
+    summary.style.cssText = `
+        background: linear-gradient(135deg, #e8f4fd 0%, #f0f8ff 100%);
+        border: 2px solid #667eea;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-top: 1rem;
+        animation: fadeIn 0.3s ease;
+    `;
+    
+    const feeDisplay = fee && fee !== '0' && fee !== 'null' && fee !== '' 
+        ? `<span style="background: #00b894; color: white; padding: 4px 12px; border-radius: 20px; font-weight: bold;">₹${parseFloat(fee).toLocaleString('en-IN')}</span>` 
+        : '<span style="background: #00b894; color: white; padding: 4px 12px; border-radius: 20px; font-weight: bold;">Free Consultation</span>';
+        
+    summary.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="background: #667eea; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold;">✓ SELECTED</span>
+                <strong style="color: #2d3436; font-size: 1.2rem;">${doctorName}</strong>
+            </div>
+            ${feeDisplay}
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem; color: #636e72; border-top: 1px solid #e1e5e9; padding-top: 1rem;">
+            <div><strong style="color: #2d3436;">Specialty:</strong><br>${specialty}</div>
+            ${city ? `<div><strong style="color: #2d3436;">Location:</strong><br>${city}</div>` : '<div></div>'}
+        </div>
+    `;
+    
+    // Add CSS animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // Insert after doctor dropdown
+    const doctorField = document.getElementById('doctor_id').parentElement;
+    doctorField.appendChild(summary);
+}
+
+// ✅ NEW: Hide doctor summary
+function hideDoctorSummary() {
+    const summary = document.getElementById('doctor-summary');
+    if (summary) {
+        summary.remove();
+    }
+}
+
+// Your existing JavaScript functions remain the same...
+document.getElementById('appointment_date').addEventListener('change', function() {
+    const doctorSelect = document.getElementById('doctor_id');
+    if (doctorSelect.value && this.value) {
+        loadAvailableSlots(doctorSelect.value, this.value);
+    }
+});
+
+function loadAvailableSlots(doctorId, appointmentDate) {
+    const timeSelect = document.getElementById('appointment_time');
+    timeSelect.innerHTML = '<option value="">Loading...</option>';
+
+    fetch('/get-available-slots', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `doctor_id=${doctorId}&appointment_date=${appointmentDate}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        timeSelect.innerHTML = '<option value="">Select time slot</option>';
+
+        if (data.success && data.slots.length > 0) {
+            data.slots.forEach(slot => {
+                const option = document.createElement('option');
+                option.value = slot;
+                option.textContent = convertTo12Hour(slot);
+                timeSelect.appendChild(option);
+            });
+        } else {
+            timeSelect.innerHTML = '<option value="">No slots available</option>';
+        }
+    })
+    .catch(error => {
+        console.error('Error loading slots:', error);
+        timeSelect.innerHTML = '<option value="">Error loading slots</option>';
+    });
+}
+
+function convertTo12Hour(time24) {
+    const [hours, minutes] = time24.split(':');
+    const hour12 = hours % 12 || 12;
+    const ampm = hours < 12 ? 'AM' : 'PM';
+    return `${hour12}:${minutes} ${ampm}`;
+}
+
+// Your existing form validation...
+document.getElementById('bookingForm').addEventListener('submit', function(e) {
+    const doctorId = document.getElementById('doctor_id').value;
+    const appointmentDate = document.getElementById('appointment_date').value;
+    const appointmentTime = document.getElementById('appointment_time').value;
+
+    if (!doctorId || !appointmentDate || !appointmentTime) {
+        e.preventDefault();
+        alert('Please fill all required fields.');
+        return;
+    }
+
+    const selectedDate = new Date(appointmentDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (selectedDate < today) {
+        e.preventDefault();
+        alert('Cannot book appointment for past dates.');
+        return;
+    }
+
+    const bookBtn = document.getElementById('bookBtn');
+    bookBtn.innerHTML = '⏳ Booking...';
+    bookBtn.disabled = true;
+});
+
+document.getElementById('appointment_date').min = new Date().toISOString().split('T')[0];
+
+// When any time part changes, update hidden field
+function updateTimeValue() {
+    var hour = document.getElementById('hour').value;
+    var minute = document.getElementById('minute').value;
+    var ampm = document.getElementById('ampm').value;
+    if (hour && minute && ampm) {
+        var h = parseInt(hour, 10);
+        if (ampm === 'PM' && h !== 12) h += 12;
+        if (ampm === 'AM' && h === 12) h = 0;
+        var hh = (h < 10 ? '0' : '') + h;
+        var mm = minute;
+        document.getElementById('appointment_time').value = hh + ':' + mm;
+    } else {
+        document.getElementById('appointment_time').value = '';
+    }
+}
+
+['hour', 'minute', 'ampm'].forEach(id =>
+    document.getElementById(id).addEventListener('change', updateTimeValue)
+);
+
+// Ensure time is updated on form submit validation as well (if needed)
+
+</script>
+
+{% endblock %}

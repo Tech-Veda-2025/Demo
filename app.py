@@ -2568,7 +2568,7 @@ def admin_doctor_users():
         offset = (page - 1) * limit
 
         cursor.execute(f"""
-            SELECT id, name, email, is_active, banned_until, 
+            SELECT id, name, email, is_active, is_verified, banned_until, 
                    ban_reason, verification_status, verified_at, created_at, last_login
             FROM doctor_users 
             {where_sql}
@@ -2644,11 +2644,11 @@ def admin_add_doctor_user():
                 cursor.execute("""
                     INSERT INTO doctor_users (
                         name, email, password, specialty, qualification,
-                        is_active, created_by_admin, verification_status, created_at
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        is_active, is_verified, created_by_admin, verification_status, created_at
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
                     full_name, email, password_hash, specialty, qualification,
-                    True, True, 'pending', datetime.now()
+                    1, 0, 1, 'pending', datetime.now()
                 ))
 
                 connection.commit()
@@ -2703,6 +2703,7 @@ def admin_edit_doctor_user(doctor_id):
             name = request.form.get('name', '').strip()
             qualification = request.form.get('qualification', '').strip()
             is_active = request.form.get('is_active') == 'on'
+            is_verified = request.form.get('is_verified') == 'off'
             verification_status = request.form.get('verification_status', 'pending')
 
 
@@ -2714,12 +2715,13 @@ def admin_edit_doctor_user(doctor_id):
                     name = %s, 
                     qualification = %s,
                     is_active = %s,
+                    is_verified = %s,
                     verification_status = %s,
                     verified_at = %s
                 WHERE id = %s
             """, (
                 email, name, qualification,
-                is_active, verification_status,
+                is_active, is_verified, verification_status,
                 datetime.now() if verification_status == 'verified' and user['verification_status'] != 'verified' else user.get('verified_at'),
                 doctor_id
             ))
@@ -2732,6 +2734,7 @@ def admin_edit_doctor_user(doctor_id):
                                  'name': name, 
                                  'email': email, 
                                  'is_active': is_active,
+                                 'is_verified': is_verified,
                                  'verification_status': verification_status
                              })
 
@@ -2762,7 +2765,8 @@ def admin_verify_doctor(doctor_id):
 
             cursor.execute("""
                 UPDATE doctor_users 
-                SET verification_status = 'verified', 
+                SET verification_status = 'verified',
+                    is_verified = 1,
                     verified_at = %s, 
                     verified_by = %s
                 WHERE id = %s
@@ -2794,7 +2798,8 @@ def admin_reject_doctor(doctor_id):
 
             cursor.execute("""
                 UPDATE doctor_users 
-                SET verification_status = 'rejected'
+                SET verification_status = 'rejected', 
+                    is_verified = 0
                 WHERE id = %s
             """, (doctor_id,))
 
@@ -2886,6 +2891,7 @@ def admin_view_doctor_user(doctor_id):
                 SET 
                     verification_status = %s,
                     verification_reason = %s,
+                    is_verified = 1,
                     verified_by = %s,
                     verified_at = %s
                 WHERE id = %s
@@ -2923,6 +2929,45 @@ def admin_view_doctor_user(doctor_id):
         print(f"View doctor user error: {e}")
         flash('Error loading doctor details.', 'error')
         return redirect(url_for('admin_doctor_users'))
+    
+@app.route('/admin/doctor-users/<int:doctor_id>/delete', methods=['POST'])
+@admin_required
+def admin_delete_doctor_user(doctor_id):
+    """Delete doctor user"""
+    if session.get('admin_role') != 'super_admin':
+        flash('Only super admin can delete users.', 'error')
+        return redirect(url_for('admin_doctor_users'))
+
+    connection = get_db_connection()
+    if connection:
+        try:
+            cursor = connection.cursor(dictionary=True)
+
+            # Get user info for logging
+            cursor.execute("SELECT name, email FROM doctor_users WHERE id = %s", (doctor_id,))
+            user = cursor.fetchone()
+
+            if user:
+                # Delete user
+                cursor.execute("DELETE FROM doctor_users WHERE id = %s", (doctor_id,))
+                connection.commit()
+
+                # Log activity
+                log_admin_activity(session['admin_id'], 'DELETE_USER', 'doctor', doctor_id,
+                                 {'name': user['name'], 'email': user['email']})
+
+                flash('User deleted successfully.', 'success')
+            else:
+                flash('User not found.', 'error')
+
+            cursor.close()
+            connection.close()
+
+        except Exception as e:
+            print(f"Delete user error: {e}")
+            flash('Error deleting user.', 'error')
+
+    return redirect(url_for('admin_doctor_users'))
 
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
@@ -3310,17 +3355,17 @@ def doctor_details(doctor_id):
         flash('Error loading doctor details.', 'error')
         return redirect(url_for('find_doctor'))
 
-@app.route('/book-appointment/<int:doctor_id>')
-@login_required
-def book_appointment(doctor_id):
-    """Book appointment with doctor"""
-    if session.get('user_type') != 'normal':
-        flash('Access denied.', 'error')
-        return redirect(url_for('index'))
+# @app.route('/book-appointment/<int:doctor_id>')
+# @login_required
+# def book_appointment(doctor_id):
+#     """Book appointment with doctor"""
+#     if session.get('user_type') != 'normal':
+#         flash('Access denied.', 'error')
+#         return redirect(url_for('index'))
 
-    # For now, redirect to a placeholder or implement booking logic
-    flash(f'Appointment booking with doctor ID {doctor_id} - Feature coming soon!', 'info')
-    return redirect(url_for('find_doctor'))
+#     # For now, redirect to a placeholder or implement booking logic
+#     flash(f'Appointment booking with doctor ID {doctor_id} - Feature coming soon!', 'info')
+#     return redirect(url_for('find_doctor'))
 
 # @app.route('/debug-photos')
 # def debug_photos():
@@ -3811,9 +3856,11 @@ def update_cart():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
-@app.route('/remove-from-cart/<int:cart_id>')
+@app.route('/remove-from-cart/<int:cart_id>', methods=['POST'])
 @login_required
 def remove_from_cart(cart_id):
+    print(f"🛒 DEBUG: Route called with method={request.method}, cart_id={cart_id}")
+    print(f"🛒 DEBUG: User ID={session.get('user_id')}")
     """Remove item from cart"""
     connection = get_db_connection()
     try:
@@ -3824,7 +3871,7 @@ def remove_from_cart(cart_id):
     except Exception as e:
         flash('Error removing item.', 'error')
 
-    return redirect(url_for('cart'))
+    return redirect(url_for('view_cart'))
 
 ### **2. Search & Filter Enhancement**
 @app.route('/api/medicines/search')
@@ -3915,85 +3962,705 @@ def search_medicines_api():
 #     except Exception as e:
 #         return f"<h2>❌ Debug Error:</h2><p>{str(e)}</p>"
 
-@app.route('/debug/test-cart-detailed')
+# @app.route('/debug/test-cart-detailed')
+# @login_required
+# def debug_test_cart_detailed():
+#     """Detailed cart system debug"""
+#     try:
+#         connection = get_db_connection()
+#         cursor = connection.cursor(dictionary=True)
+        
+#         # Get sample medicine to test with
+#         cursor.execute("SELECT id, name, stock_quantity FROM medicines WHERE is_active = 1 LIMIT 1")
+#         sample_medicine = cursor.fetchone()
+        
+#         cursor.close()
+#         connection.close()
+        
+#         return f"""
+#         <h1>🛒 Detailed Cart Debug</h1>
+        
+#         <h3>User Info:</h3>
+#         <p><strong>User ID:</strong> {session.get('user_id')}</p>
+        
+#         <h3>Sample Medicine:</h3>
+#         <p>{sample_medicine}</p>
+        
+#         <h3>Test Add to Cart:</h3>
+#         <button onclick="testAddToCart()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px;">
+#             🧪 Test Add Medicine {sample_medicine['id'] if sample_medicine else 'None'} to Cart
+#         </button>
+        
+#         <h3>Response Details:</h3>
+#         <div id="result" style="margin-top: 20px; padding: 15px; background: #f0f0f0; border-radius: 5px;"></div>
+        
+#         <script>
+#         function testAddToCart() {{
+#             const medicineId = {sample_medicine['id'] if sample_medicine else 1};
+            
+#             console.log('🧪 Testing add to cart with medicine ID:', medicineId);
+            
+#             fetch('/add-to-cart', {{
+#                 method: 'POST',
+#                 headers: {{
+#                     'Content-Type': 'application/x-www-form-urlencoded',
+#                 }},
+#                 body: `medicine_id=${{medicineId}}&quantity=1`
+#             }})
+#             .then(response => {{
+#                 console.log('📡 Response status:', response.status);
+#                 console.log('📡 Response headers:', [...response.headers.entries()]);
+                
+#                 // Get raw text first to see what we're getting
+#                 return response.text();
+#             }})
+#             .then(text => {{
+#                 console.log('📄 Raw response text:', text);
+                
+#                 document.getElementById('result').innerHTML = 
+#                     '<h4>📄 Raw Response:</h4><pre style="background: white; padding: 10px; border-radius: 5px;">' + text + '</pre>';
+                
+#                 // Try to parse as JSON
+#                 try {{
+#                     const data = JSON.parse(text);
+#                     document.getElementById('result').innerHTML += 
+#                         '<h4>✅ Parsed JSON:</h4><pre style="background: #d4edda; padding: 10px; border-radius: 5px;">' + JSON.stringify(data, null, 2) + '</pre>';
+#                 }} catch(e) {{
+#                     document.getElementById('result').innerHTML += 
+#                         '<h4>❌ JSON Parse Error:</h4><pre style="background: #f8d7da; padding: 10px; border-radius: 5px;">' + e.message + '</pre>';
+#                 }}
+#             }})
+#             .catch(error => {{
+#                 console.error('❌ Fetch error:', error);
+#                 document.getElementById('result').innerHTML = 
+#                     '<h4>❌ Network Error:</h4><p style="color: red;">' + error + '</p>';
+#             }});
+#         }}
+#         </script>
+#         """
+        
+#     except Exception as e:
+#         return f"<h2>❌ Debug Error:</h2><p>{str(e)}</p>"
+
+# @app.route('/test-post', methods=['GET', 'POST'])
+# def test_post():
+#     if request.method == 'POST':
+#         return "✅ POST WORKS!"
+#     return '<form method="post"><button type="submit">Test POST</button></form>'
+
+from datetime import date, datetime
+
+@app.route('/appointments')
 @login_required
-def debug_test_cart_detailed():
-    """Detailed cart system debug"""
+def user_appointments():
+    """Fixed appointments dashboard - works with your table structure"""
+    from datetime import date, datetime
+    
+     # ✅ Initialize ALL variables at the start (prevents UnboundLocalError)
+    upcoming_appointments = []
+    doctors = []
+    stats = {
+        'total_appointments': 0,
+        'pending_count': 0,
+        'accepted_count': 0,
+        'completed_count': 0,
+        'rejected_count': 0
+    }
+
+    connection = get_db_connection()
+    if not connection:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('normal_dashboard'))
+
     try:
-        connection = get_db_connection()
         cursor = connection.cursor(dictionary=True)
-        
-        # Get sample medicine to test with
-        cursor.execute("SELECT id, name, stock_quantity FROM medicines WHERE is_active = 1 LIMIT 1")
-        sample_medicine = cursor.fetchone()
-        
+
+        # ✅ FIX: Convert timedelta to display format
+        for appointment in upcoming_appointments:
+            if isinstance(appointment['appointment_time'], timedelta):
+                total_seconds = int(appointment['appointment_time'].total_seconds())
+                hours, remainder = divmod(total_seconds, 3600)
+                minutes, _ = divmod(remainder, 60)
+                
+                # Convert to 12-hour format
+                if hours >= 12:
+                    ampm = 'PM'
+                    display_hour = hours - 12 if hours > 12 else 12
+                else:
+                    ampm = 'AM'
+                    display_hour = hours if hours > 0 else 12
+                
+                appointment['appointment_time_display'] = f"{display_hour}:{minutes:02d} {ampm}"
+            else:
+                appointment['appointment_time_display'] = appointment['appointment_time'].strftime('%I:%M %p')
+
+        # ✅ FIXED: Use only existing columns from your tables
+        cursor.execute("""
+            SELECT 
+                a.id,
+                a.appointment_date,
+                a.appointment_time,
+                a.specialty,
+                a.mode,
+                a.status,
+                a.reason_for_visit,
+                a.notes,
+                a.doctor_notes,
+                dup.full_name as doctor_name,
+                dup.specialty as specialization,
+                dup.qualification,
+                dup.experience as experience_years,
+                du.is_verified
+            FROM appointments a
+            JOIN doctor_user_profiles dup ON a.doctor_id = dup.user_id
+            JOIN doctor_users du ON a.doctor_id = du.id
+            WHERE a.user_id = %s 
+            AND a.appointment_date >= CURDATE()
+            AND a.status IN ('pending', 'accepted')
+            AND du.is_verified = 1
+            ORDER BY a.appointment_date ASC, a.appointment_time ASC
+            LIMIT 5
+        """, (session['user_id'],))
+
+        upcoming_appointments = cursor.fetchall()
+
+        # Get real doctors for dropdown
+        cursor.execute("""
+            SELECT 
+                dup.user_id AS id,
+                dup.full_name,
+                dup.specialty AS specialization,
+                dup.qualification,
+                dup.experience AS experience_years,
+                dup.consultant_fee,
+                dup.city,
+                dup.state
+                FROM doctor_user_profiles dup
+                JOIN doctor_users du ON dup.user_id = du.id
+                WHERE du.is_verified = 1
+                AND du.is_active = 1
+                ORDER BY dup.specialty, dup.full_name;
+            """)
+
+        doctors = cursor.fetchall()
+
+        # Get appointment statistics
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_appointments,
+                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_count,
+                SUM(CASE WHEN status = 'accepted' THEN 1 ELSE 0 END) as accepted_count,
+                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_count,
+                SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected_count
+            FROM appointments 
+            WHERE user_id = %s
+        """, (session['user_id'],))
+
+        stats = cursor.fetchone()
         cursor.close()
         connection.close()
-        
-        return f"""
-        <h1>🛒 Detailed Cart Debug</h1>
-        
-        <h3>User Info:</h3>
-        <p><strong>User ID:</strong> {session.get('user_id')}</p>
-        
-        <h3>Sample Medicine:</h3>
-        <p>{sample_medicine}</p>
-        
-        <h3>Test Add to Cart:</h3>
-        <button onclick="testAddToCart()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px;">
-            🧪 Test Add Medicine {sample_medicine['id'] if sample_medicine else 'None'} to Cart
-        </button>
-        
-        <h3>Response Details:</h3>
-        <div id="result" style="margin-top: 20px; padding: 15px; background: #f0f0f0; border-radius: 5px;"></div>
-        
-        <script>
-        function testAddToCart() {{
-            const medicineId = {sample_medicine['id'] if sample_medicine else 1};
-            
-            console.log('🧪 Testing add to cart with medicine ID:', medicineId);
-            
-            fetch('/add-to-cart', {{
-                method: 'POST',
-                headers: {{
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                }},
-                body: `medicine_id=${{medicineId}}&quantity=1`
-            }})
-            .then(response => {{
-                console.log('📡 Response status:', response.status);
-                console.log('📡 Response headers:', [...response.headers.entries()]);
-                
-                // Get raw text first to see what we're getting
-                return response.text();
-            }})
-            .then(text => {{
-                console.log('📄 Raw response text:', text);
-                
-                document.getElementById('result').innerHTML = 
-                    '<h4>📄 Raw Response:</h4><pre style="background: white; padding: 10px; border-radius: 5px;">' + text + '</pre>';
-                
-                // Try to parse as JSON
-                try {{
-                    const data = JSON.parse(text);
-                    document.getElementById('result').innerHTML += 
-                        '<h4>✅ Parsed JSON:</h4><pre style="background: #d4edda; padding: 10px; border-radius: 5px;">' + JSON.stringify(data, null, 2) + '</pre>';
-                }} catch(e) {{
-                    document.getElementById('result').innerHTML += 
-                        '<h4>❌ JSON Parse Error:</h4><pre style="background: #f8d7da; padding: 10px; border-radius: 5px;">' + e.message + '</pre>';
-                }}
-            }})
-            .catch(error => {{
-                console.error('❌ Fetch error:', error);
-                document.getElementById('result').innerHTML = 
-                    '<h4>❌ Network Error:</h4><p style="color: red;">' + error + '</p>';
-            }});
-        }}
-        </script>
-        """
-        
+
+        return render_template('appointments.html',
+                             upcoming_appointments=upcoming_appointments,
+                             doctors=doctors,
+                             stats=stats,
+                             date=date)
+
     except Exception as e:
-        return f"<h2>❌ Debug Error:</h2><p>{str(e)}</p>"
+        print(f"❌ Appointments page error: {e}")
+        import traceback
+        traceback.print_exc()
+        flash('Error loading appointments.', 'error')
+        return redirect(url_for('normal_dashboard'))
+
+
+### **2. Book Appointment**
+@app.route('/book-appointment', methods=['POST'])
+@login_required
+def book_appointment():
+    """Book new appointment - updated for correct table structure"""
+    try:
+        # Get form data
+        doctor_id = int(request.form.get('doctor_id'))
+        appointment_date = request.form.get('appointment_date')
+        appointment_time = request.form.get('appointment_time')
+        specialty = request.form.get('specialty', '').strip()
+        mode = request.form.get('mode', 'offline')
+        reason_for_visit = request.form.get('reason_for_visit', '').strip()
+
+        # Validation
+        if not all([doctor_id, appointment_date, appointment_time]):
+            flash('Please fill all required fields.', 'error')
+            return redirect(url_for('user_appointments'))
+
+        # Parse date and time
+        from datetime import datetime, date, time
+        try:
+            appt_date = datetime.strptime(appointment_date, '%Y-%m-%d').date()
+            appt_time = datetime.strptime(appointment_time, '%H:%M').time()
+        except ValueError:
+            flash('Invalid date or time format.', 'error')
+            return redirect(url_for('user_appointments'))
+
+        # Check if date is not in the past
+        if appt_date < date.today():
+            flash('Cannot book appointment for past dates.', 'error')
+            return redirect(url_for('user_appointments'))
+
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+
+        # ✅ FIXED: Check doctor using correct table structure
+        cursor.execute("""
+            SELECT name, specialty
+            FROM doctor_users
+            WHERE id = %s AND is_verified = 1 AND is_active = 1
+        """, (doctor_id,))
+
+        doctor = cursor.fetchone()
+        if not doctor:
+            flash('Selected doctor is not available.', 'error')
+            cursor.close()
+            connection.close()
+            return redirect(url_for('user_appointments'))
+
+        # Check for conflicting appointments (same doctor, date, time)
+        # cursor.execute("""
+        #     SELECT id FROM appointments 
+        #     WHERE doctor_id = %s 
+        #     AND appointment_date = %s 
+        #     AND appointment_time = %s
+        #     AND status IN ('pending', 'accepted')
+        # """, (doctor_id, appt_date, appt_time))
+
+        # conflict = cursor.fetchone()
+        # if conflict:
+        #     flash('This time slot is already booked. Please choose a different time.', 'error')
+        #     cursor.close()
+        #     connection.close()
+        #     return redirect(url_for('user_appointments'))
+
+        # Check for user's duplicate appointments
+        cursor.execute("""
+            SELECT id FROM appointments 
+            WHERE user_id = %s 
+            AND appointment_date = %s 
+            AND appointment_time = %s
+            AND status IN ('pending', 'accepted')
+        """, (session['user_id'], appt_date, appt_time))
+
+        user_conflict = cursor.fetchone()
+        if user_conflict:
+            flash('You already have an appointment at this time.', 'error')
+            cursor.close()
+            connection.close()
+            return redirect(url_for('user_appointments'))
+
+        # ✅ FIXED: Book appointment with doctor_name
+        cursor.execute("""
+            INSERT INTO appointments (
+                user_id, doctor_id, appointment_date, appointment_time,
+                specialty, mode, reason_for_visit, status
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, 'pending')
+        """, (session['user_id'], doctor_id, appt_date, appt_time, 
+              specialty, mode, reason_for_visit))
+
+        appointment_id = cursor.lastrowid
+        connection.commit()
+
+        cursor.close()
+        connection.close()
+
+        # ✅ FIXED: Use correct name format
+        flash(f'Appointment booked successfully on {appt_date} at {appt_time}. Awaiting doctor confirmation.', 'success')
+        return redirect(url_for('user_appointments'))
+
+    except Exception as e:
+        print(f"Book appointment error: {e}")
+        import traceback
+        traceback.print_exc()  # Show full error details
+        flash('Error booking appointment.', 'error')
+        return redirect(url_for('user_appointments'))
+
+### **3. View All Appointments**
+@app.route('/view-appointments')
+@login_required
+def view_appointments():
+    """View all appointments with filtering - updated for correct table structure"""
+    connection = get_db_connection()
+    if not connection:
+        flash('Database connection error.', 'error')
+        return redirect(url_for('user_appointments'))
+
+    try:
+        cursor = connection.cursor(dictionary=True)
+
+        # Get filter parameters
+        status_filter = request.args.get('status', 'all')
+        date_filter = request.args.get('date', 'all')
+
+        # Build query conditions
+        where_conditions = ["a.user_id = %s"]
+        params = [session['user_id']]
+
+        if status_filter != 'all':
+            where_conditions.append("a.status = %s")
+            params.append(status_filter)
+
+        if date_filter == 'upcoming':
+            where_conditions.append("a.appointment_date >= CURDATE()")
+        elif date_filter == 'past':
+            where_conditions.append("a.appointment_date < CURDATE()")
+
+        where_clause = " AND ".join(where_conditions)
+
+        # ✅ FIXED: Get appointments with correct table structure
+        cursor.execute(f"""
+            SELECT 
+                a.id,
+                a.appointment_date,
+                a.appointment_time,
+                a.specialty,
+                a.mode,
+                a.status,
+                a.reason_for_visit,
+                a.notes,
+                a.doctor_notes,
+                a.created_at,
+                COALESCE(a.doctor_name, dup.full_name, 'Unknown Doctor') as doctor_name,
+                dup.specialty as specialization,
+                dup.qualification,
+                dup.mobile_number as doctor_phone,
+                dup.consultant_fee
+            FROM appointments a
+            LEFT JOIN doctor_user_profiles dup ON a.doctor_id = dup.user_id
+            WHERE {where_clause}
+            ORDER BY a.appointment_date DESC, a.appointment_time DESC
+        """, params)
+
+        appointments = cursor.fetchall()
+
+        # Get statistics
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN status = 'accepted' THEN 1 ELSE 0 END) as accepted,
+                SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected,
+                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled
+            FROM appointments 
+            WHERE user_id = %s
+        """, (session['user_id'],))
+
+        stats = cursor.fetchone()
+        cursor.close()
+        connection.close()
+
+        return render_template('view_appointments.html',
+                             appointments=appointments,
+                             stats=stats,
+                             status_filter=status_filter,
+                             date_filter=date_filter,
+                             date=date)
+
+    except Exception as e:
+        print(f"View appointments error: {e}")
+        import traceback
+        traceback.print_exc()
+        flash('Error loading appointments.', 'error')
+        return redirect(url_for('user_appointments'))
+
+### **4. Cancel Appointment**
+@app.route('/cancel-appointment/<int:appointment_id>', methods=['POST'])
+@login_required  
+def cancel_appointment(appointment_id):
+    """Cancel appointment - enhanced with comprehensive validation"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            flash('Database connection error.', 'error')
+            return redirect(url_for('view_appointments'))
+            
+        cursor = connection.cursor(dictionary=True)
+
+        # ✅ ENHANCED: Get comprehensive appointment details
+        cursor.execute("""
+            SELECT 
+                id, appointment_date, appointment_time, status,
+                doctor_name, specialty, mode
+            FROM appointments 
+            WHERE id = %s AND user_id = %s
+        """, (appointment_id, session['user_id']))
+
+        appointment = cursor.fetchone()
+
+        if not appointment:
+            flash('Appointment not found or does not belong to you.', 'error')
+            cursor.close()
+            connection.close()
+            return redirect(url_for('view_appointments'))
+
+        # ✅ ENHANCED: More specific status checks
+        if appointment['status'] == 'completed':
+            flash('Cannot cancel a completed appointment.', 'error')
+            cursor.close()
+            connection.close()
+            return redirect(url_for('view_appointments'))
+            
+        if appointment['status'] == 'cancelled':
+            flash('This appointment is already cancelled.', 'info')
+            cursor.close()
+            connection.close()
+            return redirect(url_for('view_appointments'))
+
+        # ✅ ENHANCED: Check if appointment is in the past
+        from datetime import date, datetime
+        appt_date = appointment['appointment_date']
+        appt_time = appointment['appointment_time']
+        
+        # Convert to datetime for comparison
+        if isinstance(appt_date, str):
+            appt_date = datetime.strptime(appt_date, '%Y-%m-%d').date()
+        if isinstance(appt_time, str):
+            appt_time = datetime.strptime(appt_time, '%H:%M:%S').time()
+            
+        appt_datetime = datetime.combine(appt_date, appt_time)
+        
+        if appt_datetime < datetime.now():
+            flash('Cannot cancel past appointments.', 'error')
+            cursor.close()
+            connection.close()
+            return redirect(url_for('view_appointments'))
+
+        # Cancel the appointment
+        try:
+            cursor.execute("""
+                UPDATE appointments 
+                SET status = 'cancelled', updated_at = NOW()
+                WHERE id = %s
+            """, (appointment_id,))
+        except:
+            cursor.execute("""
+                UPDATE appointments 
+                SET status = 'cancelled'
+                WHERE id = %s
+            """, (appointment_id,))
+
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+        # ✅ ENHANCED: Detailed success message
+        flash(f'Appointment with {appointment["doctor_name"]} on {appointment["appointment_date"]} at {appointment["appointment_time"]} has been cancelled successfully.', 'success')
+        return redirect(url_for('view_appointments'))
+
+    except Exception as e:
+        print(f"Cancel appointment error: {e}")
+        import traceback
+        traceback.print_exc()
+        flash('Error cancelling appointment. Please try again.', 'error')
+        return redirect(url_for('view_appointments'))
+
+### **5. Get Available Time Slots (AJAX)**
+# @app.route('/get-available-slots', methods=['POST'])
+# @login_required
+# def get_available_slots():
+#     """Enhanced available slots with comprehensive features"""
+#     try:
+#         doctor_id = request.form.get('doctor_id')
+#         appointment_date = request.form.get('appointment_date')
+
+#         # ✅ ENHANCED: Better validation
+#         if not doctor_id or not appointment_date:
+#             return jsonify({
+#                 'success': False, 
+#                 'message': 'Doctor ID and appointment date are required',
+#                 'slots': []
+#             })
+
+#         try:
+#             doctor_id = int(doctor_id)
+#         except (ValueError, TypeError):
+#             return jsonify({
+#                 'success': False, 
+#                 'message': 'Invalid doctor ID',
+#                 'slots': []
+#             })
+
+#         # ✅ ENHANCED: Validate date and check if not in past
+#         from datetime import datetime, date, time
+        
+#         try:
+#             selected_date = datetime.strptime(appointment_date, '%Y-%m-%d').date()
+#         except ValueError:
+#             return jsonify({
+#                 'success': False, 
+#                 'message': 'Invalid date format',
+#                 'slots': []
+#             })
+        
+#         if selected_date < date.today():
+#             return jsonify({
+#                 'success': False, 
+#                 'message': 'Cannot book appointments for past dates',
+#                 'slots': []
+#             })
+
+#         connection = get_db_connection()
+#         if not connection:
+#             return jsonify({
+#                 'success': False, 
+#                 'message': 'Database connection error',
+#                 'slots': []
+#             })
+            
+#         cursor = connection.cursor(dictionary=True)
+
+#         # ✅ ENHANCED: Check if doctor is available
+#         cursor.execute("""
+#             SELECT name, specialty, is_verified, is_active
+#             FROM doctor_users
+#             WHERE id = %s
+#         """, (doctor_id,))
+        
+#         doctor = cursor.fetchone()
+#         if not doctor or not doctor['is_verified'] or not doctor['is_active']:
+#             cursor.close()
+#             connection.close()
+#             return jsonify({
+#                 'success': False, 
+#                 'message': 'Doctor is not available for bookings',
+#                 'slots': []
+#             })
+
+#         # ✅ Get booked slots
+#         cursor.execute("""
+#             SELECT TIME_FORMAT(appointment_time, '%H:%i') as slot_time
+#             FROM appointments 
+#             WHERE doctor_id = %s AND appointment_date = %s 
+#             AND status IN ('pending', 'accepted')
+#         """, (doctor_id, appointment_date))
+
+#         booked_slots = [row['slot_time'] for row in cursor.fetchall()]
+#         cursor.close()
+#         connection.close()
+
+#         # ✅ ENHANCED: Generate available slots with lunch break
+#         available_slots = []
+#         all_slots = [
+#             '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00',
+#             # Lunch break: 13:00 - 14:00
+#             '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'
+#         ]
+
+#         # ✅ ENHANCED: Filter past hours for today
+#         if selected_date == date.today():
+#             current_time = datetime.now().time()
+#             current_hour_minute = current_time.strftime('%H:%M')
+#             all_slots = [slot for slot in all_slots if slot > current_hour_minute]
+
+#         # Filter out booked slots
+#         available_slots = [slot for slot in all_slots if slot not in booked_slots]
+
+#         return jsonify({
+#             'success': True,
+#             'slots': available_slots,
+#             'doctor_name': doctor['full_name'],
+#             'total_slots': len(available_slots)
+#         })
+
+#     except Exception as e:
+#         print(f"Get available slots error: {e}")
+#         import traceback
+#         traceback.print_exc()
+#         return jsonify({
+#             'success': False, 
+#             'message': 'Error getting available slots',
+#             'slots': []
+#         })
+
+
+# @app.route('/debug/appointments-check')
+# @login_required
+# def debug_appointments_check():
+#     """Check appointments system"""
+#     try:
+#         connection = get_db_connection()
+#         cursor = connection.cursor(dictionary=True)
+        
+#         results = {}
+        
+#         # Check if appointments table exists
+#         try:
+#             cursor.execute("SHOW TABLES LIKE 'appointments'")
+#             results['appointments_table'] = '✅ EXISTS' if cursor.fetchone() else '❌ MISSING'
+#         except Exception as e:
+#             results['appointments_table'] = f'❌ ERROR: {e}'
+        
+#         # Check user table
+#         try:
+#             cursor.execute("SHOW TABLES LIKE 'normal_users'")
+#             normal_users = cursor.fetchone()
+#             cursor.execute("SHOW TABLES LIKE 'users'")  
+#             users = cursor.fetchone()
+#             results['user_table'] = f"normal_users: {'✅' if normal_users else '❌'}, users: {'✅' if users else '❌'}"
+#         except Exception as e:
+#             results['user_table'] = f'❌ ERROR: {e}'
+        
+#         # Try simple appointments query
+#         try:
+#             cursor.execute("SELECT COUNT(*) as count FROM appointments WHERE user_id = %s", (session['user_id'],))
+#             count = cursor.fetchone()['count']
+#             results['appointments_count'] = f'✅ Found {count} appointments'
+#         except Exception as e:
+#             results['appointments_count'] = f'❌ ERROR: {e}'
+        
+#         cursor.close()
+#         connection.close()
+        
+#         return f"""
+#         <h1>🧪 Appointments System Debug</h1>
+#         <p><strong>User ID:</strong> {session.get('user_id')}</p>
+        
+#         <h3>Database Checks:</h3>
+#         <p><strong>Appointments Table:</strong> {results['appointments_table']}</p>
+#         <p><strong>User Tables:</strong> {results['user_table']}</p>
+#         <p><strong>User Appointments:</strong> {results['appointments_count']}</p>
+        
+#         <br><a href="/user/dashboard">← Back to Dashboard</a>
+#         """
+        
+#     except Exception as e:
+#         return f"<h1>❌ Debug Error:</h1><p>{str(e)}</p>"
+
+
+@app.route('/debug-templates')
+@login_required  
+def debug_templates():
+    """Debug route to check template file locations"""
+    import os
+    from flask import current_app
+    
+    template_folder = current_app.template_folder
+    templates_path = os.path.join(os.getcwd(), template_folder)
+    
+    files = []
+    if os.path.exists(templates_path):
+        for root, dirs, filenames in os.walk(templates_path):
+            for filename in filenames:
+                if filename.endswith('.html'):
+                    rel_path = os.path.relpath(os.path.join(root, filename), templates_path)
+                    files.append(rel_path)
+    
+    return f"""
+    <h1>🔍 Template Debug</h1>
+    <p><strong>Template folder:</strong> {templates_path}</p>
+    <p><strong>Available templates:</strong></p>
+    <ul>{"".join([f"<li>{f}</li>" for f in sorted(files)])}</ul>
+    <p><strong>Looking for:</strong> view_appointments.html</p>
+    <p><strong>Found:</strong> {'✅ Yes' if 'view_appointments.html' in files else '❌ No'}</p>
+    """
 
 
 

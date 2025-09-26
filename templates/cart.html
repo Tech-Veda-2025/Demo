@@ -229,9 +229,17 @@
                     </td>
                     <td>₹<span id="subtotal-{{ item.cart_id }}">{{ "%.2f"|format(item.subtotal) }}</span></td>
                     <td>
+                        <!-- Debug: See what URL is being generated -->
+                        <p>Debug URL: {{ url_for('remove_from_cart', cart_id=item.cart_id) }}</p>
+
                         <form method="post" action="{{ url_for('remove_from_cart', cart_id=item.cart_id) }}" style="display:inline;">
                             <button class="remove-btn" type="submit">Remove</button>
                         </form>
+
+                        <!-- <form method="get" action="{{ url_for('remove_from_cart', cart_id=item.cart_id) }}" style="display:inline;">
+                            <button class="remove-btn" type="submit">Remove</button>
+                            <button class="remove-btn" type="submit"     onclick="removeItem({{ item.cart_id }})">Remove</button>
+                        </form> -->
                     </td>
                 </tr>
                 {% endfor %}
@@ -255,6 +263,11 @@
 </div>
 
 <script>
+    function removeItem(cartId) {
+    fetch(`/remove-from-cart/${cartId}`, {
+        method: 'POST'
+    }).then(() => location.reload());
+}
 // AJAX cart quantity update (with proper route and CSRF as needed)
 function updateQty(cartId, delta) {
     let qtyInput = document.getElementById(`qty-${cartId}`);

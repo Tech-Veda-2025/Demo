@@ -456,7 +456,7 @@
                             {% endif %}
 
                             {% if session.admin_role == 'super_admin' %}
-                                <form method="POST" action="#" style="display:inline;">
+                                <form method="POST" action="{{ url_for('admin_delete_doctor_user', doctor_id=doctor.id) }}" style="display:inline;">
                                     <button type="submit" class="btn btn-sm btn-danger" 
                                             onclick="return confirm('Permanently delete this doctor? This action cannot be undone.')">
                                         🗑️ Delete
